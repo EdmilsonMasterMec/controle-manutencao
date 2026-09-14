@@ -1,0 +1,1343 @@
+@import "tailwindcss";
+
+/* =========================================
+   RESET E CONFIGURAÇÕES GERAIS
+========================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+  background: #08111f;
+  color: #ffffff;
+}
+
+/* =========================================
+   FUNDO PRINCIPAL
+========================================= */
+
+.Robertengenharia-app {
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+
+  background-image:
+    linear-gradient(
+      rgba(5, 12, 22, 0.60),
+      rgba(5, 12, 22, 0.70)
+    ),
+    url("/images/escavadeira-mastermec.jpg");
+
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+
+  padding: 40px 20px 80px;
+}
+
+/* =========================================
+   CONTAINER PRINCIPAL
+========================================= */
+
+.page-container {
+  width: 100%;
+  max-width: 1150px;
+  margin: 0 auto;
+}
+
+/* =========================================
+   LINK VOLTAR
+========================================= */
+
+.voltar {
+  display: inline-flex;
+  align-items: center;
+
+  margin-bottom: 25px;
+
+  color: #f5a623;
+  text-decoration: none;
+
+  font-weight: 600;
+  font-size: 15px;
+
+  transition: 0.2s;
+}
+
+.voltar:hover {
+  color: #ffbd4a;
+  transform: translateX(-3px);
+}
+
+/* =========================================
+   CABEÇALHO DAS PÁGINAS
+========================================= */
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 20px;
+
+  padding-bottom: 25px;
+  margin-bottom: 25px;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.page-header h1 {
+  margin: 0;
+
+  font-size: 32px;
+  font-weight: 700;
+
+  color: #ffffff;
+}
+
+.page-header p {
+  margin: 8px 0 0;
+
+  color: #aeb8c6;
+  font-size: 16px;
+}
+
+/* =========================================
+   BOTÕES
+========================================= */
+
+button {
+  font-family: inherit;
+}
+
+.btn-novo,
+.btn-salvar {
+  border: none;
+  border-radius: 10px;
+
+  padding: 14px 22px;
+
+  background: linear-gradient(
+    135deg,
+    #ffb000,
+    #ff7a00
+  );
+
+  color: #101820;
+
+  font-weight: 700;
+  font-size: 14px;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+}
+
+.btn-novo:hover,
+.btn-salvar:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 8px 25px
+    rgba(255, 153, 0, 0.35);
+}
+
+/* =========================================
+   CARDS
+========================================= */
+
+.cards-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(auto-fit, minmax(250px, 1fr));
+
+  gap: 20px;
+
+  margin-top: 25px;
+}
+
+.card-premium {
+  min-height: 160px;
+
+  padding: 25px;
+
+  background:
+    rgba(18, 29, 45, 0.92);
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.10);
+
+  border-radius: 16px;
+
+  backdrop-filter: blur(12px);
+
+  transition: 0.25s;
+}
+
+.card-premium:hover {
+  transform: translateY(-5px);
+
+  border-color:
+    rgba(255, 166, 0, 0.45);
+
+  box-shadow:
+    0 15px 40px
+    rgba(0, 0, 0, 0.35);
+}
+
+.card-premium h3 {
+  margin: 0 0 15px;
+
+  font-size: 19px;
+
+  color: #ffffff;
+}
+
+.card-premium p {
+  margin: 0;
+
+  color: #aeb8c6;
+
+  line-height: 1.6;
+}
+
+/* =========================================
+   BUSCA
+========================================= */
+
+.busca-container {
+  width: 100%;
+
+  padding: 14px 18px;
+
+  margin-bottom: 15px;
+
+  background:
+    rgba(18, 29, 45, 0.90);
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.12);
+
+  border-radius: 10px;
+
+  color: #aeb8c6;
+
+  font-size: 15px;
+}
+
+/* =========================================
+   TABELAS
+========================================= */
+
+.tabela-container {
+  width: 100%;
+
+  overflow-x: auto;
+
+  background:
+    rgba(18, 29, 45, 0.95);
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.10);
+
+  border-radius: 14px;
+
+  overflow: hidden;
+
+  box-shadow:
+    0 10px 35px
+    rgba(0, 0, 0, 0.30);
+}
+
+table {
+  width: 100%;
+
+  min-width: 850px;
+
+  border-collapse: collapse;
+}
+
+thead {
+  background:
+    rgba(255, 255, 255, 0.04);
+}
+
+th {
+  padding: 16px 18px;
+
+  text-align: left;
+
+  color: #dfe6ee;
+
+  font-size: 14px;
+
+  font-weight: 700;
+
+  white-space: nowrap;
+}
+
+td {
+  padding: 15px 18px;
+
+  color: #d1d7df;
+
+  font-size: 14px;
+
+  border-top:
+    1px solid
+    rgba(255, 255, 255, 0.07);
+
+  white-space: nowrap;
+}
+
+tbody tr {
+  transition: 0.2s;
+}
+
+tbody tr:hover {
+  background:
+    rgba(255, 166, 0, 0.06);
+}
+
+/* =========================================
+   STATUS
+========================================= */
+
+.status-operando,
+.status-manutencao,
+.status-parada {
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  min-width: 105px;
+
+  padding: 7px 12px;
+
+  border-radius: 20px;
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.status-operando {
+  background:
+    rgba(0, 180, 140, 0.18);
+
+  color: #52e0bd;
+}
+
+.status-manutencao {
+  background:
+    rgba(255, 166, 0, 0.18);
+
+  color: #ffb52e;
+}
+
+.status-parada {
+  background:
+    rgba(255, 70, 70, 0.18);
+
+  color: #ff7777;
+}
+
+/* =========================================
+   BOTÕES DA TABELA
+========================================= */
+
+.btn-editar,
+.btn-excluir {
+  border: none;
+
+  width: 38px;
+  height: 38px;
+
+  margin-right: 8px;
+
+  border-radius: 8px;
+
+  cursor: pointer;
+
+  font-size: 16px;
+
+  transition: 0.2s;
+}
+
+.btn-editar {
+  background: #263244;
+  color: #ffb000;
+}
+
+.btn-editar:hover {
+  background: #34435a;
+  transform: translateY(-2px);
+}
+
+.btn-excluir {
+  background: #2a303b;
+  color: #ff6666;
+}
+
+.btn-excluir:hover {
+  background: #432c32;
+  transform: translateY(-2px);
+}
+
+/* =========================================
+   FORMULÁRIO
+========================================= */
+
+.formulario-maquina {
+  width: 100%;
+
+  margin-bottom: 25px;
+
+  padding: 25px;
+
+  background:
+    rgba(18, 29, 45, 0.96);
+
+  border:
+    1px solid
+    rgba(255, 166, 0, 0.30);
+
+  border-radius: 16px;
+
+  box-shadow:
+    0 15px 40px
+    rgba(0, 0, 0, 0.30);
+}
+
+.formulario-maquina h2 {
+  margin: 0 0 22px;
+
+  color: #ffb000;
+
+  font-size: 18px;
+}
+
+/* =========================================
+   GRID FORMULÁRIO
+========================================= */
+
+.form-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, 1fr);
+
+  gap: 14px;
+}
+
+.form-grid input,
+.form-grid select {
+  width: 100%;
+
+  height: 50px;
+
+  padding: 0 15px;
+
+  background: #222c39;
+
+  border:
+    1px solid #3a4758;
+
+  border-radius: 8px;
+
+  color: #ffffff;
+
+  font-size: 14px;
+
+  outline: none;
+
+  transition: 0.2s;
+}
+
+.form-grid input:focus,
+.form-grid select:focus {
+  border-color: #ffae00;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(255, 174, 0, 0.10);
+}
+
+/* =========================================
+   BOTÕES DO FORMULÁRIO
+========================================= */
+
+.form-botoes {
+  display: flex;
+
+  justify-content: flex-end;
+
+  gap: 12px;
+
+  margin-top: 22px;
+}
+
+.btn-cancelar {
+  border: none;
+
+  padding: 13px 22px;
+
+  border-radius: 9px;
+
+  background: #2b3646;
+
+  color: #ffffff;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+}
+
+.btn-cancelar:hover {
+  background: #3a4658;
+}
+
+/* =========================================
+   RESPONSIVIDADE
+========================================= */
+
+@media (max-width: 900px) {
+  .form-grid {
+    grid-template-columns:
+      repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .RobertEngenharia-app {
+    padding: 25px 12px 60px;
+  }
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .page-header h1 {
+    font-size: 26px;
+  }
+  .btn-novo {
+    width: 100%;
+  }
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .form-botoes {
+    flex-direction: column-reverse;
+  }
+  .form-botoes button {
+    width: 100%;
+  }
+  .cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========================================
+   DASHBOARD PRINCIPAL ROBERT ENGENHARIA
+======================================== */
+
+.dashboard {
+  min-height: 100vh;
+  position: relative;
+  background-image: url("/images/dashboard-mastermec.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  color: white;
+}
+
+.dashboard-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 10, 18, 0.25);
+  pointer-events: none;
+}
+
+.dashboard-content {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* ========================================
+   SIDEBAR
+======================================== */
+
+.sidebar {
+  width: 270px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 30px 18px;
+  background: rgba(7, 16, 29, 0.92);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.sidebar-logo {
+  padding-bottom: 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-logo h2 {
+  font-size: 24px;
+  margin: 0 0 6px 0;
+  color: #f5a623;
+}
+
+.sidebar-logo span {
+  font-size: 12px;
+  color: #8492a6;
+}
+
+.sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 25px;
+}
+
+.menu-title {
+  margin-top: 18px;
+  margin-bottom: 8px;
+  padding-left: 12px;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: #718096;
+  font-weight: bold;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 14px;
+  border-radius: 9px;
+  text-decoration: none;
+  color: #cbd5e1;
+  font-size: 15px;
+  transition: 0.2s;
+}
+
+.menu-item:hover {
+  background: rgba(255, 166, 35, 0.12);
+  color: #f5a623;
+  transform: translateX(4px);
+}
+
+.menu-item.ativo {
+  background: linear-gradient(90deg, rgba(255, 166, 35, 0.22), rgba(255, 166, 35, 0.05));
+  color: #f5a623;
+  border-left: 3px solid #f5a623;
+}
+
+.menu-icon {
+  width: 24px;
+  text-align: center;
+  font-size: 18px;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 20px;
+  font-size: 11px;
+  color: #64748b;
+  text-align: center;
+}
+
+/* ========================================
+   CONTEÚDO PRINCIPAL
+======================================== */
+
+.dashboard-main {
+  flex: 1;
+  max-width: 1400px;
+  padding: 45px 55px;
+  margin: 0 auto;
+}
+
+/* ========================================
+   HEADER
+======================================== */
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 30px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dashboard-subtitle {
+  font-size: 13px;
+  color: #f5a623;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.dashboard-header h1 {
+  font-size: 42px;
+  margin: 8px 0;
+  font-weight: 700;
+}
+
+.dashboard-header p {
+  margin: 0;
+  color: #b8c2cf;
+  font-size: 16px;
+  max-width: 550px;
+}
+
+.dashboard-date {
+  padding: 12px 18px;
+  border-radius: 10px;
+  background: rgba(255, 166, 35, 0.12);
+  border: 1px solid rgba(255, 166, 35, 0.25);
+  color: #f5a623;
+  font-size: 14px;
+}
+
+/* ========================================
+   CARDS ESTATÍSTICOS
+======================================== */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 20px;
+  margin-top: 30px;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 22px;
+  background: rgba(20, 32, 48, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+  transition: 0.25s;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(245, 166, 35, 0.45);
+}
+
+.stat-icon {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 166, 35, 0.12);
+  border-radius: 12px;
+  font-size: 24px;
+}
+
+.stat-card span {
+  display: block;
+  color: #9ba8b7;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.stat-card strong {
+  font-size: 28px;
+  color: white;
+}
+
+/* ========================================
+   PAINEL
+======================================== */
+
+.dashboard-panel {
+  margin-top: 30px;
+  padding: 25px;
+  background: rgba(14, 25, 39, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 22px;
+}
+
+.panel-header h2 {
+  margin: 0 0 5px 0;
+  font-size: 22px;
+}
+
+.panel-header p {
+  margin: 0;
+  color: #8e9bab;
+  font-size: 13px;
+}
+
+.btn-ver-todas {
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: #f5a623;
+  color: #111827;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+/* ========================================
+   TABELA
+======================================== */
+
+.dashboard-table {
+  width: 100%;
+}
+
+.table-header,
+.table-row {
+  display: grid;
+  grid-template-columns: 2fr 1.2fr 1fr 1.2fr 0.6fr;
+  align-items: center;
+  gap: 15px;
+}
+
+.table-header {
+  padding: 14px 18px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.table-row {
+  padding: 17px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: #d8dee7;
+  font-size: 14px;
+}
+
+.table-row:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.btn-visualizar {
+  color: #f5a623;
+  text-decoration: none;
+  font-size: 17px;
+}
+
+/* ========================================
+   ATALHOS
+======================================== */
+
+.atalhos {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-top: 30px;
+  padding-bottom: 30px;
+}
+
+.atalho-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  background: rgba(15, 27, 42, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  text-decoration: none;
+  color: white;
+  transition: 0.2s;
+}
+
+.atalho-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(245, 166, 35, 0.45);
+}
+
+.atalho-card > span {
+  font-size: 26px;
+}
+
+.atalho-card strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.atalho-card small {
+  color: #94a3b8;
+}
+
+/* ========================================
+   SEM MÁQUINAS
+======================================== */
+
+.sem-maquinas {
+  padding: 35px;
+  text-align: center;
+  color: #94a3b8;
+}
+
+/* ========================================
+   RESPONSIVO
+======================================== */
+
+@media (max-width: 1100px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .atalhos { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 800px) {
+  .dashboard-content { flex-direction: column; }
+  .sidebar { width: 100%; min-height: auto; }
+  .dashboard-main { padding: 25px; }
+  .dashboard-header { flex-direction: column; align-items: flex-start; gap: 20px; }
+}
+
+@media (max-width: 600px) {
+  .stats-grid, .atalhos { grid-template-columns: 1fr; }
+  .table-header { display: none; }
+  .table-row { grid-template-columns: 1fr; gap: 8px; }
+}
+
+/* =========================================================
+   SERVIÇOS DA MANUTENÇÃO
+   ========================================================= */
+
+.servicos-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 25px;
+}
+
+.servico-card {
+  width: 100%;
+  padding: 22px;
+  background: rgba(10, 20, 34, 0.96);
+  border: 1px solid rgba(255, 166, 0, 0.30);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.servico-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 18px;
+}
+
+.servico-cabecalho h3 {
+  margin: 0;
+  color: #ffb000;
+  font-size: 17px;
+}
+
+.btn-remover-servico {
+  border: none;
+  background: #432c32;
+  color: #ff7777;
+  padding: 8px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-remover-servico:hover {
+  background: #5a343b;
+}
+
+/* Campo da descrição do serviço */
+.servico-descricao {
+  width: 100%;
+  min-height: 110px;
+  padding: 14px 15px;
+  background: #222c39;
+  border: 1px solid #3a4758;
+  border-radius: 8px;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  outline: none;
+}
+
+.servico-descricao:focus {
+  border-color: #ffae00;
+  box-shadow: 0 0 0 3px rgba(255, 174, 0, 0.10);
+}
+
+/* Área das fotos */
+.fotos-servico {
+  margin-top: 20px;
+}
+
+.fotos-servico-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 12px;
+}
+
+.fotos-servico-titulo strong {
+  color: #ffffff;
+  font-size: 14px;
+}
+
+/* Botão adicionar foto */
+.btn-adicionar-foto {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 15px;
+  border: 1px solid rgba(255, 166, 0, 0.40);
+  border-radius: 8px;
+  background: rgba(255, 166, 0, 0.12);
+  color: #ffb000;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-adicionar-foto:hover {
+  background: rgba(255, 166, 0, 0.22);
+  transform: translateY(-1px);
+}
+
+/* Input de arquivo escondido */
+.input-foto-escondido {
+  display: none;
+}
+
+/* Galeria de fotos do serviço */
+.fotos-servico-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 15px;
+  margin-top: 15px;
+}
+
+/* Cada foto */
+.foto-servico-card {
+  overflow: hidden;
+  background: #182333;
+  border: 1px solid #354255;
+  border-radius: 10px;
+}
+
+/* Imagem */
+.foto-servico-card img {
+  display: block;
+  width: 100%;
+  height: 190px;
+  object-fit: cover;
+  background: #101820;
+}
+
+/* Área abaixo da foto */
+.foto-servico-descricao {
+  padding: 12px;
+}
+
+.foto-servico-descricao label {
+  display: block;
+  margin-bottom: 7px;
+  color: #aeb8c6;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.foto-servico-descricao textarea {
+  width: 100%;
+  min-height: 75px;
+  padding: 10px;
+  background: #222c39;
+  border: 1px solid #3a4758;
+  border-radius: 7px;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  resize: vertical;
+  outline: none;
+}
+
+.foto-servico-descricao textarea:focus {
+  border-color: #ffae00;
+  box-shadow: 0 0 0 3px rgba(255, 174, 0, 0.10);
+}
+
+/* Botão remover foto */
+.btn-remover-foto {
+  width: calc(100% - 24px);
+  margin: 0 12px 12px;
+  padding: 8px;
+  border: none;
+  border-radius: 7px;
+  background: #2a303b;
+  color: #ff7777;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-remover-foto:hover {
+  background: #432c32;
+}
+
+/* Botão + Novo Serviço */
+.btn-adicionar-servico {
+  width: 100%;
+  padding: 14px;
+  border: 1px dashed rgba(255, 166, 0, 0.55);
+  border-radius: 10px;
+  background: rgba(255, 166, 0, 0.08);
+  color: #ffb000;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-adicionar-servico:hover {
+  background: rgba(255, 166, 0, 0.15);
+  border-color: #ffb000;
+}
+
+/* =========================================================
+   RESPONSIVO - SERVIÇOS
+   ========================================================= */
+
+@media (max-width: 600px) {
+  .servico-card { padding: 16px; }
+  .servico-cabecalho { align-items: flex-start; }
+  .fotos-servico-titulo { flex-direction: column; align-items: flex-start; }
+  .btn-adicionar-foto { width: 100%; }
+  .fotos-servico-grid { grid-template-columns: 1fr; }
+  .foto-servico-card img { height: 220px; }
+}
+
+/* =========================================
+   EFEITOS DE TRANSIÇÃO PREMIUM
+   (Corrigido para fundo SÓLIDO no Hover)
+========================================= */
+
+.fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.menu-link {
+  transition: all 0.3s ease !important;
+}
+.menu-link:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  transform: translateX(8px);
+  border-color: rgba(255, 176, 0, 0.4) !important;
+}
+
+.card-hover {
+  transition: all 0.4s ease !important;
+}
+.card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8) !important;
+  border-color: rgba(255, 176, 0, 0.5) !important;
+  
+  /* CORREÇÃO: Fundo sólido no hover! */
+  background: #1e293b !important; 
+}
+
+.btn-hover {
+  transition: all 0.3s ease !important;
+}
+.btn-hover:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 25px rgba(255, 176, 0, 0.6) !important;
+}
+
+.row-hover {
+  transition: all 0.3s ease !important;
+}
+.row-hover:hover {
+  /* Fundo sólido nas linhas da tabela também */
+  background: #1e293b !important; 
+}
+/* =========================================
+   CORREÇÃO RESPONSIVA - MASTER MEC
+========================================= */
+
+/* Impede que elementos ultrapassem a tela */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Layout principal */
+.Mastermec-app {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Conteúdo principal */
+.Mastermec-main {
+  flex: 1;
+  min-width: 0;
+  width: 0;
+  overflow-x: auto;
+}
+
+/* Tabelas: permitem rolagem horizontal */
+.tabela-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto !important;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabela-container table {
+  min-width: 850px;
+}
+
+/* Evita que os painéis ultrapassem a tela */
+.page-container,
+.dashboard-main,
+.dashboard-content,
+.dashboard-panel {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .Mastermec-main {
+    width: 100%;
+    padding: 12px;
+  }
+
+  .page-container {
+    width: 100%;
+    padding: 0;
+  }
+
+  .dashboard-main {
+    width: 100%;
+    padding: 16px;
+  }
+
+  .dashboard-header h1 {
+    font-size: 26px;
+    overflow-wrap: anywhere;
+  }
+
+  .stats-grid,
+  .atalhos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .formulario-maquina {
+    padding: 16px;
+  }
+
+  .dashboard-panel {
+    padding: 14px;
+  }
+}
+
+/* Celulares pequenos */
+@media (max-width: 380px) {
+  .Mastermec-main {
+    padding: 10px;
+  }
+
+  .dashboard-main {
+    padding: 12px;
+  }
+
+  .dashboard-panel {
+    padding: 10px;
+  }
+}
+/* Correção responsiva geral */
+.Mastermec-app {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  min-width: 0;
+}
+
+.Mastermec-sidebar {
+  flex: 0 0 260px;
+  min-width: 0;
+}
+
+.Mastermec-main {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .Mastermec-app {
+    flex-direction: column;
+  }
+
+  .Mastermec-sidebar {
+    flex: none;
+    width: 100%;
+    min-height: auto;
+  }
+
+  .Mastermec-main {
+    width: 100%;
+    padding: 12px;
+  }
+}

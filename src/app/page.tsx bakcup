@@ -1,0 +1,622 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+type Maquina = {
+  id: number;
+  nome: string;
+  modelo: string;
+  fabricante: string;
+  ano: string;
+  horimetro: string;
+  responsavel: string;
+  status: string;
+};
+
+const maquinasIniciais: Maquina[] = [
+  {
+    id: 1,
+    nome: "Escavadeira Principal",
+    modelo: "R160LC-9S",
+    fabricante: "Hyundai",
+    ano: "2020",
+    horimetro: "8500",
+    responsavel: "Operador 01",
+    status: "Operando",
+  },
+  {
+    id: 2,
+    nome: "Retroescavadeira",
+    modelo: "310L",
+    fabricante: "John Deere",
+    ano: "2021",
+    horimetro: "6200",
+    responsavel: "Operador 02",
+    status: "Manutenção",
+  },
+  {
+    id: 3,
+    nome: "Pá Carregadeira",
+    modelo: "L60F",
+    fabricante: "Volvo",
+    ano: "2018",
+    horimetro: "11200",
+    responsavel: "Operador 03",
+    status: "Operando",
+  },
+];
+
+export default function Home() {
+  const [pagina, setPagina] = useState("Dashboard");
+  const [maquinas, setMaquinas] = useState<Maquina[]>([]);
+  const [mostrarCadastro, setMostrarCadastro] = useState(false);
+
+  const [nome, setNome] = useState("");
+  const [modelo, setModelo] = useState("");
+  const [fabricante, setFabricante] = useState("");
+  const [ano, setAno] = useState("");
+  const [horimetro, setHorimetro] = useState("");
+  const [responsavel, setResponsavel] = useState("");
+  const [status, setStatus] = useState("Operando");
+
+  useEffect(() => {
+    const dadosSalvos = localStorage.getItem("mastermec_maquinas");
+
+    if (dadosSalvos) {
+      setMaquinas(JSON.parse(dadosSalvos));
+    } else {
+      setMaquinas(maquinasIniciais);
+      localStorage.setItem(
+        "mastermec_maquinas",
+        JSON.stringify(maquinasIniciais)
+      );
+    }
+  }, []);
+
+  function salvarMaquinas(novasMaquinas: Maquina[]) {
+    setMaquinas(novasMaquinas);
+    localStorage.setItem(
+      "mastermec_maquinas",
+      JSON.stringify(novasMaquinas)
+    );
+  }
+
+  function cadastrarMaquina() {
+    if (!nome || !modelo || !fabricante) {
+      alert("Preencha pelo menos Nome, Modelo e Fabricante.");
+      return;
+    }
+
+    const novaMaquina: Maquina = {
+      id: Date.now(),
+      nome,
+      modelo,
+      fabricante,
+      ano,
+      horimetro,
+      responsavel,
+      status,
+    };
+
+    salvarMaquinas([...maquinas, novaMaquina]);
+
+    setNome("");
+    setModelo("");
+    setFabricante("");
+    setAno("");
+    setHorimetro("");
+    setResponsavel("");
+    setStatus("Operando");
+
+    setMostrarCadastro(false);
+
+    alert("Máquina cadastrada com sucesso!");
+  }
+
+  function excluirMaquina(id: number) {
+    const confirmar = confirm(
+      "Deseja realmente excluir esta máquina?"
+    );
+
+    if (!confirmar) return;
+
+    salvarMaquinas(
+      maquinas.filter((maquina) => maquina.id !== id)
+    );
+  }
+
+  const operando = maquinas.filter(
+    (maquina) => maquina.status === "Operando"
+  ).length;
+
+  const manutencao = maquinas.filter(
+    (maquina) => maquina.status === "Manutenção"
+  ).length;
+
+  const paradas = maquinas.filter(
+    (maquina) => maquina.status === "Parada"
+  ).length;
+
+  function classeStatus(statusMaquina: string) {
+    if (statusMaquina === "Operando") {
+      return "status status-operando";
+    }
+
+    if (statusMaquina === "Manutenção") {
+      return "status status-manutencao";
+    }
+
+    return "status status-parada";
+  }
+
+  function renderDashboard() {
+    return (
+      <>
+        <div className="welcome">
+          <h2>Bem-vindo ao MasterMec</h2>
+
+          <p>
+            Sistema Inteligente de Gestão e Manutenção de Máquinas Pesadas
+          </p>
+        </div>
+
+        <div className="cards">
+          <div className="card machine">
+            <div className="card-title">
+              Total de Máquinas
+            </div>
+
+            <div className="card-value">
+              {maquinas.length}
+            </div>
+          </div>
+
+          <div className="card success">
+            <div className="card-title">
+              Máquinas Operando
+            </div>
+
+            <div className="card-value">
+              {operando}
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-title">
+              Em Manutenção
+            </div>
+
+            <div className="card-value">
+              {manutencao}
+            </div>
+          </div>
+
+          <div className="card danger">
+            <div className="card-title">
+              Máquinas Paradas
+            </div>
+
+            <div className="card-value">
+              {paradas}
+            </div>
+          </div>
+        </div>
+
+        <div className="panel">
+          <div className="panel-header">
+            <h3>Resumo das Máquinas</h3>
+
+            <button
+              className="btn btn-primary"
+              onClick={() => setPagina("Máquinas")}
+            >
+              Ver Máquinas
+            </button>
+          </div>
+
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Máquina</th>
+                  <th>Modelo</th>
+                  <th>Fabricante</th>
+                  <th>Horímetro</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {maquinas.slice(0, 5).map((maquina) => (
+                  <tr key={maquina.id}>
+                    <td>{maquina.nome}</td>
+                    <td>{maquina.modelo}</td>
+                    <td>{maquina.fabricante}</td>
+                    <td>{maquina.horimetro} h</td>
+
+                    <td>
+                      <span
+                        className={classeStatus(
+                          maquina.status
+                        )}
+                      >
+                        {maquina.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  function renderMaquinas() {
+    return (
+      <>
+        <div className="panel">
+          <div className="panel-header">
+            <div>
+              <h3>Máquinas Cadastradas</h3>
+
+              <p
+                style={{
+                  color: "#6b7280",
+                  marginTop: "5px",
+                  fontSize: "13px",
+                }}
+              >
+                Gerenciamento completo da frota
+              </p>
+            </div>
+
+            <button
+              className="btn btn-primary"
+              onClick={() =>
+                setMostrarCadastro(!mostrarCadastro)
+              }
+            >
+              {mostrarCadastro
+                ? "Cancelar"
+                : "+ Nova Máquina"}
+            </button>
+          </div>
+
+          {mostrarCadastro && (
+            <div className="panel">
+              <h3 style={{ marginBottom: "20px" }}>
+                Cadastro de Máquina
+              </h3>
+
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Nome da Máquina *</label>
+
+                  <input
+                    value={nome}
+                    onChange={(e) =>
+                      setNome(e.target.value)
+                    }
+                    placeholder="Ex: Escavadeira 01"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Modelo *</label>
+
+                  <input
+                    value={modelo}
+                    onChange={(e) =>
+                      setModelo(e.target.value)
+                    }
+                    placeholder="Ex: R160LC-9S"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Fabricante *</label>
+
+                  <input
+                    value={fabricante}
+                    onChange={(e) =>
+                      setFabricante(e.target.value)
+                    }
+                    placeholder="Ex: Hyundai"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Ano</label>
+
+                  <input
+                    value={ano}
+                    onChange={(e) =>
+                      setAno(e.target.value)
+                    }
+                    placeholder="Ex: 2020"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Horímetro Atual</label>
+
+                  <input
+                    value={horimetro}
+                    onChange={(e) =>
+                      setHorimetro(e.target.value)
+                    }
+                    placeholder="Ex: 8500"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Responsável</label>
+
+                  <input
+                    value={responsavel}
+                    onChange={(e) =>
+                      setResponsavel(e.target.value)
+                    }
+                    placeholder="Nome do responsável"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Status</label>
+
+                  <select
+                    value={status}
+                    onChange={(e) =>
+                      setStatus(e.target.value)
+                    }
+                  >
+                    <option>Operando</option>
+                    <option>Manutenção</option>
+                    <option>Parada</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-actions">
+                <button
+                  className="btn btn-primary"
+                  onClick={cadastrarMaquina}
+                >
+                  Salvar Máquina
+                </button>
+
+                <button
+                  className="btn btn-secondary"
+                  onClick={() =>
+                    setMostrarCadastro(false)
+                  }
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Modelo</th>
+                  <th>Fabricante</th>
+                  <th>Ano</th>
+                  <th>Horímetro</th>
+                  <th>Responsável</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {maquinas.map((maquina) => (
+                  <tr key={maquina.id}>
+                    <td>{maquina.nome}</td>
+                    <td>{maquina.modelo}</td>
+                    <td>{maquina.fabricante}</td>
+                    <td>{maquina.ano}</td>
+                    <td>{maquina.horimetro} h</td>
+                    <td>{maquina.responsavel}</td>
+
+                    <td>
+                      <span
+                        className={classeStatus(
+                          maquina.status
+                        )}
+                      >
+                        {maquina.status}
+                      </span>
+                    </td>
+
+                    <td>
+                      <button
+                        className="btn btn-danger"
+                        onClick={() =>
+                          excluirMaquina(maquina.id)
+                        }
+                      >
+                        Excluir
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {maquinas.length === 0 && (
+              <div className="empty">
+                Nenhuma máquina cadastrada.
+              </div>
+            )}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  function renderConteudo() {
+    if (pagina === "Dashboard") {
+      return renderDashboard();
+    }
+
+    if (pagina === "Máquinas") {
+      return renderMaquinas();
+    }
+
+    return (
+      <div className="panel">
+        <div className="empty">
+          <h3>{pagina}</h3>
+
+          <p style={{ marginTop: "10px" }}>
+            Módulo em desenvolvimento.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="app">
+      <aside className="sidebar">
+        <div className="logo">
+          <h1>MasterMec</h1>
+
+          <p>Controle de Manutenção</p>
+        </div>
+
+        <nav className="menu">
+          <button
+            className={
+              pagina === "Dashboard"
+                ? "menu-item active"
+                : "menu-item"
+            }
+            onClick={() => setPagina("Dashboard")}
+          >
+            📊 Dashboard
+          </button>
+
+          <button
+            className={
+              pagina === "Máquinas"
+                ? "menu-item active"
+                : "menu-item"
+            }
+            onClick={() => setPagina("Máquinas")}
+          >
+            🚜 Máquinas
+          </button>
+
+          <div className="submenu">
+            <button
+              onClick={() => setPagina("Máquinas")}
+            >
+              › Cadastro de Máquinas
+            </button>
+
+            <button
+              onClick={() => setPagina("Fotos")}
+            >
+              › Fotos
+            </button>
+
+            <button
+              onClick={() => setPagina("Histórico")}
+            >
+              › Histórico
+            </button>
+          </div>
+
+          <button
+            className={
+              pagina === "Manutenção"
+                ? "menu-item active"
+                : "menu-item"
+            }
+            onClick={() => setPagina("Manutenção")}
+          >
+            🔧 Manutenção
+          </button>
+
+          <div className="submenu">
+            <button
+              onClick={() =>
+                setPagina("Manutenção Preventiva")
+              }
+            >
+              › Preventiva
+            </button>
+
+            <button
+              onClick={() =>
+                setPagina("Manutenção Corretiva")
+              }
+            >
+              › Corretiva
+            </button>
+          </div>
+
+          <button
+            className={
+              pagina === "Mecânicos"
+                ? "menu-item active"
+                : "menu-item"
+            }
+            onClick={() => setPagina("Mecânicos")}
+          >
+            👨‍🔧 Mecânicos
+          </button>
+
+          <button
+            className={
+              pagina === "Relatórios"
+                ? "menu-item active"
+                : "menu-item"
+            }
+            onClick={() => setPagina("Relatórios")}
+          >
+            📋 Relatórios
+          </button>
+
+          <button
+            className={
+              pagina === "Configurações"
+                ? "menu-item active"
+                : "menu-item"
+            }
+            onClick={() => setPagina("Configurações")}
+          >
+            ⚙️ Configurações
+          </button>
+        </nav>
+
+        <div className="sidebar-footer">
+          <strong>MasterMec</strong>
+          <br />
+          Soluções em Máquinas Pesadas
+        </div>
+      </aside>
+
+      <main className="main">
+        <header className="header">
+          <h2>{pagina}</h2>
+
+          <span>
+            Sistema de Gestão de Frota
+          </span>
+        </header>
+
+        <section className="content">
+          {renderConteudo()}
+        </section>
+      </main>
+    </div>
+  );
+}
