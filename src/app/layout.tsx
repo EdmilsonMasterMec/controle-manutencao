@@ -1,33 +1,38 @@
-import './globals.css'
-import Link from 'next/link'
-import BackgroundSlide from './BackgroundSlide'
+
+import "./globals.css";
+import Link from "next/link";
+import BackgroundSlide from "./BackgroundSlide";
 
 export const metadata = {
-  title: 'ROBERT ENGENHARIA - Gestão de Manutenção',
-}
+  title: "ROBERT ENGENHARIA - Gestão de Manutenção",
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="pt-BR">
       <head>
-        {/* Essa linha é a "mágica" que força qualquer celular a ativar o layout responsivo */}
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1"
+        />
       </head>
-      
+
       <body>
         <BackgroundSlide />
 
-        {/* Usando o método seguro do React para injetar CSS Global */}
         <style dangerouslySetInnerHTML={{ __html: `
-          * {
+          *,
+          *::before,
+          *::after {
             box-sizing: border-box;
           }
 
-          html, body {
+          html,
+          body {
             margin: 0;
             padding: 0;
             width: 100%;
@@ -35,7 +40,6 @@ export default function RootLayout({
             overflow-x: hidden;
           }
 
-          /* ESTRUTURA PRINCIPAL */
           .Mastermec-app {
             display: flex;
             width: 100%;
@@ -44,14 +48,13 @@ export default function RootLayout({
             z-index: 1;
           }
 
-          /* MENU LATERAL - DESKTOP (PC) */
           .Mastermec-sidebar {
             width: 260px;
-            flex-shrink: 0;
+            flex: 0 0 260px;
             background: rgba(17, 14, 19, 0.35);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border-right: 1px solid rgba(255,255,255,0.08);
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
             padding: 24px 20px;
             display: flex;
             flex-direction: column;
@@ -90,120 +93,112 @@ export default function RootLayout({
             text-decoration: none;
             padding: 12px 16px;
             border-radius: 10px;
-            background: rgba(255,255,255,0.05);
+            background: rgba(255, 255, 255, 0.05);
             display: flex;
             align-items: center;
             gap: 12px;
             font-weight: 500;
             font-size: 14px;
-            transition: all 0.2s;
+            transition: background 0.2s;
           }
 
           .Mastermec-nav a:hover {
-            background: rgba(255,255,255,0.12);
+            background: rgba(255, 255, 255, 0.12);
+          }
+
+          .Mastermec-nav a:focus-visible {
+            outline: 2px solid #ffb000;
+            outline-offset: 3px;
           }
 
           .Mastermec-nav a .icon {
-            font-size: 18px;
+            font-size: 20px;
           }
 
-          /* ÁREA DE CONTEÚDO (Onde ficam as tabelas) */
           .Mastermec-main {
             flex: 1;
+            min-width: 0;
             padding: 30px;
-            overflow-y: auto;
             overflow-x: hidden;
           }
 
-          /* ======== O SEGREDO DO CELULAR ======== */
           @media (max-width: 768px) {
             .Mastermec-app {
-              display: block; /* Desliga o modo lado a lado */
-              padding-bottom: 75px; /* Libera espaço no fundo para o menu não tampar o conteúdo */
+              display: block;
+              min-height: 100vh;
+              padding-bottom: 76px;
             }
 
             .Mastermec-main {
-              padding: 15px; /* Margens menores no celular */
               width: 100%;
+              min-width: 0;
+              padding: 15px;
             }
 
-            /* Transforma a barra lateral em uma Barra Inferior (App) */
             .Mastermec-sidebar {
               position: fixed;
               bottom: 0;
               left: 0;
               width: 100%;
               height: 70px;
-              flex-direction: row;
               padding: 0;
               gap: 0;
-              background: rgba(17, 14, 19, 0.95);
-              border-top: 1px solid rgba(255,255,255,0.1);
+              flex-direction: row;
+              background: rgba(17, 14, 19, 0.97);
+              border-top: 1px solid rgba(255, 255, 255, 0.1);
               border-right: none;
-              z-index: 9999; /* Fica sempre por cima */
+              z-index: 9999;
             }
 
             .Mastermec-brand {
-              display: none; /* Esconde a logo no celular para caberem os botões */
+              display: none;
             }
 
             .Mastermec-nav {
-              flex-direction: row;
               width: 100%;
+              flex-direction: row;
               justify-content: space-around;
-              align-items: center;
-              padding: 0 5px;
+              align-items: stretch;
+              gap: 0;
+              padding: 0 8px;
             }
 
             .Mastermec-nav a {
-              flex-direction: column; /* Coloca o texto debaixo do ícone */
-              padding: 8px 0;
-              gap: 4px;
-              background: transparent;
-              font-size: 10px;
-              text-align: center;
-              border-radius: 0;
               flex: 1;
+              min-width: 0;
+              flex-direction: column;
+              justify-content: center;
+              padding: 7px 4px;
+              gap: 3px;
+              background: transparent;
+              font-size: 12px;
+              text-align: center;
+              border-radius: 8px;
             }
 
             .Mastermec-nav a .icon {
-              font-size: 20px; /* Ícone maior no celular para tocar com o dedo */
+              font-size: 21px;
+              line-height: 1.2;
             }
           }
         ` }} />
 
         <div className="Mastermec-app">
           <aside className="Mastermec-sidebar">
-            
             <div className="Mastermec-brand">
               <h2>⚙️ Robert Eng.</h2>
-              <p>Gestão de Frota</p>
+              <p>Gestão de Manutenção</p>
             </div>
 
-            <nav className="Mastermec-nav">
-              <Link href="/">
-                <span className="icon">📊</span>
-                <span className="text">Visão Geral</span>
-              </Link>
-
-              <Link href="/maquinas">
-                <span className="icon">🚜</span>
-                <span className="text">Equipamentos</span>
-              </Link>
-
+            <nav className="Mastermec-nav" aria-label="Menu principal">
               <Link href="/manutencao">
-                <span className="icon">🔧</span>
-                <span className="text">Manutenção</span>
-              </Link>
-
-              <Link href="/mecanicos">
-                <span className="icon">👨‍🔧</span>
-                <span className="text">Equipe</span>
+                <span className="icon" aria-hidden="true">🔧</span>
+                <span>Serviços</span>
               </Link>
 
               <Link href="/relatorios">
-                <span className="icon">📈</span>
-                <span className="text">Relatórios</span>
+                <span className="icon" aria-hidden="true">📄</span>
+                <span>Relatórios</span>
               </Link>
             </nav>
           </aside>
@@ -214,5 +209,5 @@ export default function RootLayout({
         </div>
       </body>
     </html>
-  )
+  );
 }
