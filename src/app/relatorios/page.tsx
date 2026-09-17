@@ -1,20 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 type FotoRelatorio = {
   id?: number | string;
-  imagem?: string;
+  imagem: string;
   descricao?: string;
-  caminho?: string;
 };
 
 type HistoricoRelatorio = {
   id: string;
   data?: string;
-  descricao?: string;
+  descricao: string;
   tipo?: string;
   mecanico?: string;
   horimetro?: string;
@@ -40,92 +39,92 @@ type MaquinaRelatorio = {
   historico: HistoricoRelatorio[];
 };
 
-type EquipamentoBanco = {
-  id: number | string;
-  nome?: string | null;
-  fabricante?: string | null;
-  modelo?: string | null;
-  ano?: string | number | null;
-  numero_serie?: string | null;
-  numeroSerie?: string | null;
-  horimetro?: string | number | null;
-  status?: string | null;
-  tipo?: string | null;
-  tipo_maquina?: string | null;
-  proxima_manutencao?: string | null;
-  "proxima-manutencao"?: string | null;
-  proximaManutencao?: string | null;
-  observacoes?: string | null;
-  foto?: string | null;
-  fotos?: unknown;
-};
-
-type ServicoBanco = {
-  id?: number | string;
-  descricao?: string;
-  fotos?: unknown;
-};
-
-type ManutencaoBanco = {
-  id: number | string;
-  equipamento_id?: number | string | null;
-  maquina?: string | null;
-  tipo?: string | null;
-  mecanico?: string | null;
-  data?: string | null;
-  horimetro?: string | number | null;
-  prioridade?: string | null;
-  status?: string | null;
-  defeito?: string | null;
-  observacao?: string | null;
-  servicos?: unknown;
-};
+type RegistroBanco = Record<string, unknown>;
 
 function texto(valor: unknown): string {
   if (valor === null || valor === undefined) return "";
   return String(valor);
 }
 
-function normalizarNome(nome?: string | null): string {
-  return (nome || "")
-    .trim()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("pt-BR");
+function normalizarNome(nome: unknown): string {
+  return texto(nome).trim().toLocaleLowerCase("pt-BR");
 }
 
-function listaFotos(valor: unknown): FotoRelatorio[] {
+function formatarData(data?: string): string {
+  if (!data) return "Não informada";
+
+  const partes = data.slice(0, 10).split("-");
+  if (partes.length === 3 && partes[0].length === 4) {
+    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+  }
+
+  return data;
+}
+
+function lerLista(valor: unknown): RegistroBanco[] {
+  if (Array.isArray(valor)) {
+    return valor.filter(
+      (item): item is RegistroBanco =>
+        Boolean(item) && typeof item === "object"
+    );
+  }
+
+  // Alguns campos JSON podem chegar como texto.
+  if (typeof valor === "string" && valor.trim()) {
+    try {
+      const convertido: unknown = JSON.parse(valor);
+      if (Array.isArray(convertido)) {
+        return convertido.filter(
+          (item): item is RegistroBanco =>
+            Boolean(item) && typeof item === "object"
+        );
+      }
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+}
+
+function lerFotos(valor: unknown): FotoRelatorio[] {
   if (!Array.isArray(valor)) return [];
 
   return valor
     .map((item, index) => {
       if (typeof item === "string") {
-        return { id: index, imagem: item, descricao: "" };
+        return {
+          id: index,
+          imagem: item,
+          descricao: "",
+        };
       }
 
       if (item && typeof item === "object") {
-        const foto = item as Record<string, unknown>;
+        const foto = item as RegistroBanco;
+        const imagem =
+          texto(foto.imagem) ||
+          texto(foto.url) ||
+          texto(foto.caminho);
+
+        if (!imagem) return null;
 
         return {
           id:
             typeof foto.id === "number" || typeof foto.id === "string"
               ? foto.id
               : index,
-          imagem:
-            texto(foto.imagem) ||
-            texto(foto.url) ||
-            texto(foto.caminho),
+          imagem,
           descricao: texto(foto.descricao),
-          caminho: texto(foto.caminho),
         };
       }
 
       return null;
     })
-    .filter((foto): foto is FotoRelatorio => Boolean(foto?.imagem));
+    .filter((foto): foto is FotoRelatorio => foto !== null);
 }
 
-function listaFotosMaquina(valor: unknown): string[] {
+function lerFotosMaquina(valor: unknown): string[] {
   if (!Array.isArray(valor)) return [];
 
   return valor
@@ -133,7 +132,7 @@ function listaFotosMaquina(valor: unknown): string[] {
       if (typeof item === "string") return item;
 
       if (item && typeof item === "object") {
-        const foto = item as Record<string, unknown>;
+        const foto = item as RegistroBanco;
         return (
           texto(foto.imagem) ||
           texto(foto.url) ||
@@ -146,186 +145,214 @@ function listaFotosMaquina(valor: unknown): string[] {
     .filter(Boolean);
 }
 
-function obterServicos(valor: unknown): ServicoBanco[] {
-  if (!Array.isArray(valor)) return [];
-
-  return valor.filter(
-    (item): item is ServicoBanco =>
-      Boolean(item) && typeof item === "object"
+function converterHistoricoEmRegistro(
+  registro: RegistroBanco,
+  indice: number,
+  idMaquina: number
+): HistoricoRelatorio {
+  const fotos = lerFotos(
+    registro.fotos ?? registro.imagens ?? registro.anexos
   );
+
+  return {
+    id: `${idMaquina}-historico-${texto(registro.id) || indice}`,
+    data: texto(registro.data ?? registro.data_manutencao),
+    descricao:
+      texto(
+        registro.descricao ??
+          registro.defeito ??
+          registro.observacao ??
+          registro.servico
+      ) || "Manutenção registrada",
+    tipo: texto(registro.tipo),
+    mecanico: texto(registro.mecanico ?? registro.responsavel),
+    horimetro: texto(registro.horimetro),
+    prioridade: texto(registro.prioridade),
+    status: texto(registro.status),
+    fotos,
+  };
 }
 
-function formatarData(data?: string): string {
-  if (!data) return "Não informada";
-
-  const partes = data.split("-");
-  if (partes.length === 3 && partes[0].length === 4) {
-    return `${partes[2].slice(0, 2)}/${partes[1]}/${partes[0]}`;
-  }
-
-  return data;
-}
-
-function obterHistoricoDaMaquina(
-  equipamento: EquipamentoBanco,
-  manutencoes: ManutencaoBanco[]
+function historicoDoEquipamento(
+  equipamento: RegistroBanco,
+  manutencoes: RegistroBanco[]
 ): HistoricoRelatorio[] {
-  const nomeEquipamento = normalizarNome(equipamento.nome);
+  const idMaquina = Number(equipamento.id);
+  const nomeMaquina = normalizarNome(equipamento.nome);
 
-  const registros = manutencoes.filter((manutencao) => {
+  // Primeiro, lê o histórico JSON que está na própria tabela equipamentos.
+  const historicoSalvo = lerLista(equipamento.historico).map(
+    (registro, indice) =>
+      converterHistoricoEmRegistro(registro, indice, idMaquina)
+  );
+
+  // Depois, procura registros na tabela manutencoes pelo ID ou nome.
+  const manutencoesRelacionadas = manutencoes.filter((registro) => {
+    const idRegistro =
+      registro.equipamento_id ??
+      registro.maquina_id ??
+      registro.id_equipamento;
+
     const mesmoId =
-      manutencao.equipamento_id !== null &&
-      manutencao.equipamento_id !== undefined &&
-      String(manutencao.equipamento_id) === String(equipamento.id);
+      idRegistro !== null &&
+      idRegistro !== undefined &&
+      texto(idRegistro) === texto(equipamento.id);
 
     const mesmoNome =
-      Boolean(nomeEquipamento) &&
-      normalizarNome(manutencao.maquina) === nomeEquipamento;
+      normalizarNome(registro.maquina) === nomeMaquina;
 
     return mesmoId || mesmoNome;
   });
 
-  return registros.flatMap((manutencao) => {
-    const servicos = obterServicos(manutencao.servicos);
+  const historicoDaTabela = manutencoesRelacionadas.flatMap(
+    (registro, indice) => {
+      const servicos = lerLista(registro.servicos);
 
-    const servicosParaExibir =
-      servicos.length > 0
-        ? servicos
-        : [
-            {
-              descricao:
-                manutencao.defeito ||
-                manutencao.observacao ||
-                "Manutenção registrada",
-            },
-          ];
+      if (servicos.length > 0) {
+        return servicos.map((servico, servicoIndice) => {
+          const descricao =
+            texto(servico.descricao).trim() ||
+            texto(registro.defeito).trim() ||
+            texto(registro.observacao).trim() ||
+            "Serviço realizado";
 
-    return servicosParaExibir.map((servico, indice) => ({
-      id: `${manutencao.id}-${indice}`,
-      data: manutencao.data || "",
-      descricao:
-        texto(servico.descricao).trim() ||
-        texto(manutencao.defeito).trim() ||
-        texto(manutencao.observacao).trim() ||
-        "Serviço realizado",
-      tipo: manutencao.tipo || "",
-      mecanico: manutencao.mecanico || "",
-      horimetro: texto(manutencao.horimetro),
-      prioridade: manutencao.prioridade || "",
-      status: manutencao.status || "",
-      fotos: listaFotos(servico.fotos),
-    }));
+          return {
+            id: `manutencao-${texto(registro.id)}-${servicoIndice}`,
+            data: texto(registro.data),
+            descricao,
+            tipo: texto(registro.tipo),
+            mecanico: texto(registro.mecanico),
+            horimetro: texto(registro.horimetro),
+            prioridade: texto(registro.prioridade),
+            status: texto(registro.status),
+            fotos: lerFotos(servico.fotos),
+          };
+        });
+      }
+
+      return [
+        converterHistoricoEmRegistro(
+          registro,
+          indice,
+          idMaquina
+        ),
+      ];
+    }
+  );
+
+  // Junta os dois históricos, evitando duplicar registros idênticos.
+  const todos = [...historicoSalvo, ...historicoDaTabela];
+  const vistos = new Set<string>();
+
+  return todos.filter((item) => {
+    const chave = [
+      item.data,
+      item.descricao,
+      item.tipo,
+      item.mecanico,
+    ].join("|");
+
+    if (vistos.has(chave)) return false;
+    vistos.add(chave);
+    return true;
   });
 }
 
 function formatarEquipamento(
-  equipamento: EquipamentoBanco,
-  manutencoes: ManutencaoBanco[]
+  equipamento: RegistroBanco,
+  manutencoes: RegistroBanco[]
 ): MaquinaRelatorio {
   return {
     id: Number(equipamento.id),
-    nome: equipamento.nome || "Máquina sem nome",
-    fabricante: equipamento.fabricante || "",
-    modelo: equipamento.modelo || "",
+    nome: texto(equipamento.nome) || "Máquina sem nome",
+    fabricante: texto(equipamento.fabricante),
+    modelo: texto(equipamento.modelo),
     ano: texto(equipamento.ano),
-    numeroSerie:
-      equipamento.numero_serie ||
-      equipamento.numeroSerie ||
-      "",
+    numeroSerie: texto(
+      equipamento.numero_serie ?? equipamento.numeroSerie
+    ),
     horimetro: texto(equipamento.horimetro),
-    status: equipamento.status || "",
-    tipo:
-      equipamento.tipo ||
-      equipamento.tipo_maquina ||
-      "",
-    proximaManutencao:
-      equipamento.proxima_manutencao ||
-      equipamento["proxima-manutencao"] ||
-      equipamento.proximaManutencao ||
-      "",
-    observacoes: equipamento.observacoes || "",
-    foto: equipamento.foto || "",
-    fotos: listaFotosMaquina(equipamento.fotos),
-    historico: obterHistoricoDaMaquina(equipamento, manutencoes),
+    status: texto(equipamento.status),
+    tipo: texto(equipamento.tipo ?? equipamento.tipo_maquina),
+    proximaManutencao: texto(
+      equipamento.proxima_manutencao ??
+        equipamento.proxima_manutencao ??
+        equipamento.proximaManutencao ??
+        equipamento.proxima_manutencao
+    ),
+    observacoes: texto(equipamento.observacoes),
+    foto: texto(equipamento.foto),
+    fotos: lerFotosMaquina(equipamento.fotos),
+    historico: historicoDoEquipamento(equipamento, manutencoes),
   };
 }
 
-function classeStatus(status?: string): string {
-  if (status === "Operando") return "status-operando";
-  if (status === "Em Manutenção") return "status-manutencao";
-  return "status-parada";
-}
-
-export default function Relatorios() {
+export default function RelatoriosPage() {
   const [maquinas, setMaquinas] = useState<MaquinaRelatorio[]>([]);
   const [maquinaSelecionada, setMaquinaSelecionada] =
     useState<MaquinaRelatorio | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
-  const [diagnostico, setDiagnostico] = useState("");
+  const [avisoManutencoes, setAvisoManutencoes] = useState("");
 
-  const carregarDados = useCallback(async () => {
-    setCarregando(true);
-    setErro("");
-    setDiagnostico("");
+  useEffect(() => {
+    let ativo = true;
 
-    try {
+    async function carregarDados() {
+      setCarregando(true);
+      setErro("");
+      setAvisoManutencoes("");
+
+      // A consulta de máquinas é independente da consulta de manutenções.
       const equipamentosResposta = await supabase
         .from("equipamentos")
         .select("*")
         .order("id", { ascending: true });
+
+      if (!ativo) return;
 
       if (equipamentosResposta.error) {
         console.error(
           "Erro ao carregar equipamentos:",
           equipamentosResposta.error
         );
-
         setErro(
-          `O Supabase retornou um erro ao buscar equipamentos: ${equipamentosResposta.error.message}`
+          `Não foi possível carregar as máquinas: ${equipamentosResposta.error.message}`
         );
         setMaquinas([]);
-        setMaquinaSelecionada(null);
+        setCarregando(false);
         return;
       }
 
-      const equipamentos = (equipamentosResposta.data ||
-        []) as EquipamentoBanco[];
+      const equipamentos = (equipamentosResposta.data || []) as RegistroBanco[];
 
-      if (equipamentos.length === 0) {
-        setDiagnostico(
-          "A consulta à tabela public.equipamentos foi concluída, mas retornou 0 registros. Confira se o site está usando o mesmo projeto Supabase mostrado no Table Editor e se as permissões de leitura permitem acessar os registros."
-        );
-        setMaquinas([]);
-        setMaquinaSelecionada(null);
-        return;
-      }
-
+      // Mesmo que a tabela manutencoes apresente erro, a lista de máquinas
+      // continua sendo exibida e o histórico JSON do equipamento será lido.
       const manutencoesResposta = await supabase
         .from("manutencoes")
-        .select("*")
-        .order("data", { ascending: false });
+        .select("*");
+
+      if (!ativo) return;
+
+      let manutencoes: RegistroBanco[] = [];
 
       if (manutencoesResposta.error) {
         console.error(
           "Erro ao carregar manutenções:",
           manutencoesResposta.error
         );
-
-        setErro(
-          `As máquinas foram encontradas, mas houve um erro ao buscar as manutenções: ${manutencoesResposta.error.message}`
+        setAvisoManutencoes(
+          `As máquinas foram carregadas, mas não foi possível consultar a tabela manutencoes: ${manutencoesResposta.error.message}`
         );
+      } else {
+        manutencoes = (manutencoesResposta.data || []) as RegistroBanco[];
       }
-
-      const manutencoes = (manutencoesResposta.data ||
-        []) as ManutencaoBanco[];
 
       const maquinasFormatadas = equipamentos.map((equipamento) =>
         formatarEquipamento(equipamento, manutencoes)
       );
 
       setMaquinas(maquinasFormatadas);
-
       setMaquinaSelecionada((selecionada) => {
         if (!selecionada) return null;
 
@@ -336,30 +363,29 @@ export default function Relatorios() {
         );
       });
 
-      setDiagnostico(
-        `Consulta concluída: ${equipamentos.length} máquina(s) recebida(s) da tabela equipamentos e ${manutencoes.length} registro(s) de manutenção recebido(s).`
-      );
-    } catch (erroDesconhecido) {
-      console.error("Erro inesperado no relatório:", erroDesconhecido);
-
-      setErro(
-        erroDesconhecido instanceof Error
-          ? erroDesconhecido.message
-          : "Ocorreu um erro inesperado ao carregar o relatório."
-      );
-      setMaquinas([]);
-      setMaquinaSelecionada(null);
-    } finally {
       setCarregando(false);
     }
+
+    carregarDados();
+
+    return () => {
+      ativo = false;
+    };
   }, []);
 
-  useEffect(() => {
-    void carregarDados();
-  }, [carregarDados]);
+  function selecionarParaImprimir(maquina: MaquinaRelatorio) {
+    setMaquinaSelecionada(maquina);
 
-  function imprimirRelatorio() {
-    window.print();
+    // Aguarda a atualização da tela antes de abrir a impressão.
+    window.setTimeout(() => {
+      window.print();
+    }, 300);
+  }
+
+  function classeStatus(status?: string) {
+    if (status === "Operando") return "status-operando";
+    if (status === "Em Manutenção") return "status-manutencao";
+    return "status-parada";
   }
 
   return (
@@ -375,32 +401,15 @@ export default function Relatorios() {
               <div>
                 <h1>📊 Relatórios</h1>
                 <p>
-                  Relatórios completos das máquinas e histórico de
-                  manutenção
+                  Selecione uma máquina para visualizar ou imprimir
+                  seu relatório.
                 </p>
               </div>
-
-              <button
-                type="button"
-                className="btn-atualizar"
-                onClick={() => void carregarDados()}
-                disabled={carregando}
-              >
-                {carregando ? "Carregando..." : "↻ Atualizar"}
-              </button>
             </header>
-
-            <div className="relatorio-introducao">
-              <h2>Selecione uma máquina</h2>
-              <p>
-                Escolha uma máquina abaixo para visualizar e imprimir
-                seu relatório completo.
-              </p>
-            </div>
 
             {carregando && (
               <div className="mensagem-relatorio">
-                Carregando máquinas e manutenções...
+                Carregando máquinas...
               </div>
             )}
 
@@ -410,51 +419,53 @@ export default function Relatorios() {
               </div>
             )}
 
-            {diagnostico && (
-              <div className="diagnostico-relatorio" role="status">
-                {diagnostico}
+            {avisoManutencoes && (
+              <div className="aviso-relatorio" role="status">
+                {avisoManutencoes}
               </div>
             )}
 
             {!carregando && !erro && maquinas.length === 0 && (
               <div className="sem-maquinas">
-                <h3>Nenhuma máquina recebida pelo relatório</h3>
-                <p>
-                  As máquinas aparecem no cadastro, mas esta consulta
-                  não recebeu registros. Confira o diagnóstico acima.
-                </p>
+                Nenhuma máquina encontrada na tabela equipamentos.
               </div>
             )}
 
             {!carregando && maquinas.length > 0 && (
               <div className="relatorio-maquinas-grid">
                 {maquinas.map((maquina) => (
-                  <button
-                    type="button"
-                    key={maquina.id}
-                    className={
-                      maquinaSelecionada?.id === maquina.id
-                        ? "relatorio-maquina-card ativo"
-                        : "relatorio-maquina-card"
-                    }
-                    onClick={() => setMaquinaSelecionada(maquina)}
-                  >
-                    <div className="relatorio-card-icon">🚜</div>
+                  <div className="relatorio-maquina-card" key={maquina.id}>
+                    <button
+                      type="button"
+                      className="relatorio-selecionar"
+                      onClick={() => setMaquinaSelecionada(maquina)}
+                    >
+                      <span className="relatorio-card-icon">🚜</span>
 
-                    <div className="relatorio-card-texto">
-                      <h3>{maquina.nome}</h3>
-                      <p>
-                        {maquina.fabricante} {maquina.modelo}
-                      </p>
-                      <span className={classeStatus(maquina.status)}>
-                        {maquina.status || "Sem status"}
+                      <span className="relatorio-card-texto">
+                        <strong>{maquina.nome}</strong>
+                        <span>
+                          {maquina.fabricante} {maquina.modelo}
+                        </span>
+                        <span className={classeStatus(maquina.status)}>
+                          {maquina.status || "Sem status"}
+                        </span>
+                        <small>
+                          {maquina.historico.length} registro(s) de manutenção
+                        </small>
                       </span>
-                      <small>
-                        {maquina.historico.length} registro(s) de
-                        manutenção
-                      </small>
-                    </div>
-                  </button>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn-imprimir-card"
+                      title={`Imprimir relatório de ${maquina.nome}`}
+                      aria-label={`Imprimir relatório de ${maquina.nome}`}
+                      onClick={() => selecionarParaImprimir(maquina)}
+                    >
+                      🖨️
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -462,22 +473,17 @@ export default function Relatorios() {
 
           {maquinaSelecionada && (
             <div className="relatorio-documento">
-              <div className="relatorio-cabecalho">
+              <header className="relatorio-cabecalho">
                 <div>
                   <h1>MasterMec</h1>
-                  <p>
-                    Sistema Inteligente de Gestão e Manutenção de
-                    Máquinas
-                  </p>
+                  <p>Gestão de Manutenção de Máquinas</p>
                 </div>
 
                 <div className="relatorio-titulo">
                   <h2>RELATÓRIO TÉCNICO</h2>
-                  <p>
-                    Emissão: {new Date().toLocaleDateString("pt-BR")}
-                  </p>
+                  <p>Emissão: {new Date().toLocaleDateString("pt-BR")}</p>
                 </div>
-              </div>
+              </header>
 
               <div className="relatorio-linha" />
 
@@ -499,7 +505,7 @@ export default function Relatorios() {
                 <button
                   type="button"
                   className="btn-imprimir"
-                  onClick={imprimirRelatorio}
+                  onClick={() => window.print()}
                 >
                   🖨️ Imprimir / Salvar PDF
                 </button>
@@ -558,17 +564,12 @@ export default function Relatorios() {
                         : "-"}
                     </strong>
                   </div>
+                  <div className="dado-item">
+                    <span>Responsável</span>
+                    <strong>{maquinaSelecionada.observacoes || "-"}</strong>
+                  </div>
                 </div>
               </section>
-
-              {maquinaSelecionada.observacoes && (
-                <section className="relatorio-secao">
-                  <h3>📝 Observações Gerais</h3>
-                  <div className="observacoes-relatorio">
-                    {maquinaSelecionada.observacoes}
-                  </div>
-                </section>
-              )}
 
               <section className="relatorio-secao">
                 <h3>🔧 Histórico de Manutenção</h3>
@@ -576,7 +577,7 @@ export default function Relatorios() {
                 {maquinaSelecionada.historico.length > 0 ? (
                   <div className="historico-lista">
                     {maquinaSelecionada.historico.map((item, index) => (
-                      <div className="historico-item" key={item.id}>
+                      <article className="historico-item" key={item.id}>
                         <div className="historico-numero">{index + 1}</div>
 
                         <div className="historico-conteudo">
@@ -585,40 +586,31 @@ export default function Relatorios() {
                           </div>
 
                           <div className="historico-descricao">
-                            {item.descricao || "Serviço realizado"}
+                            {item.descricao}
                           </div>
 
                           <div className="historico-detalhes">
                             {item.tipo && (
-                              <p>
-                                <strong>Tipo:</strong> {item.tipo}
-                              </p>
+                              <p><strong>Tipo:</strong> {item.tipo}</p>
                             )}
                             {item.mecanico && (
-                              <p>
-                                <strong>Mecânico:</strong> {item.mecanico}
-                              </p>
+                              <p><strong>Mecânico:</strong> {item.mecanico}</p>
                             )}
                             {item.horimetro && (
-                              <p>
-                                <strong>Horímetro:</strong> {item.horimetro}
-                              </p>
+                              <p><strong>Horímetro:</strong> {item.horimetro}</p>
                             )}
                             {item.prioridade && (
-                              <p>
-                                <strong>Prioridade:</strong> {item.prioridade}
-                              </p>
+                              <p><strong>Prioridade:</strong> {item.prioridade}</p>
                             )}
                             {item.status && (
-                              <p>
-                                <strong>Status:</strong> {item.status}
-                              </p>
+                              <p><strong>Status:</strong> {item.status}</p>
                             )}
                           </div>
 
                           {item.fotos.length > 0 && (
                             <div className="fotos-servico-relatorio">
                               <h4>📷 Fotos do Serviço</h4>
+
                               <div className="galeria-relatorio">
                                 {item.fotos.map((foto, fotoIndex) => (
                                   <div
@@ -639,7 +631,7 @@ export default function Relatorios() {
                             </div>
                           )}
                         </div>
-                      </div>
+                      </article>
                     ))}
                   </div>
                 ) : (
@@ -654,10 +646,7 @@ export default function Relatorios() {
                   <h3>📸 Galeria de Fotos da Máquina</h3>
                   <div className="galeria-relatorio">
                     {maquinaSelecionada.fotos.map((foto, index) => (
-                      <div
-                        className="galeria-item"
-                        key={`${foto}-${index}`}
-                      >
+                      <div className="galeria-item" key={`${foto}-${index}`}>
                         <img
                           src={foto}
                           alt={`Foto ${index + 1} da máquina`}
@@ -668,15 +657,13 @@ export default function Relatorios() {
                 </section>
               )}
 
-              <div className="relatorio-rodape">
+              <footer className="relatorio-rodape">
                 <div>
                   <strong>MasterMec</strong>
-                  <p>Gestão Inteligente de Máquinas e Manutenção</p>
+                  <p>Gestão de Máquinas e Manutenção</p>
                 </div>
-                <div>
-                  <p>Relatório gerado pelo sistema MasterMec</p>
-                </div>
-              </div>
+                <p>Relatório gerado pelo sistema MasterMec</p>
+              </footer>
             </div>
           )}
         </section>
@@ -684,36 +671,12 @@ export default function Relatorios() {
 
       <style jsx global>{`
         .relatorio-introducao {
-          margin-top: 25px;
-          margin-bottom: 25px;
-        }
-
-        .relatorio-introducao h2 {
-          color: #f1f5f9;
-          margin-bottom: 8px;
-        }
-
-        .relatorio-introducao p {
-          color: #94a3b8;
-        }
-
-        .btn-atualizar {
-          padding: 10px 16px;
-          border: 1px solid #64748b;
-          border-radius: 8px;
-          background: #162231;
-          color: white;
-          cursor: pointer;
-        }
-
-        .btn-atualizar:disabled {
-          opacity: 0.6;
-          cursor: wait;
+          margin: 25px 0;
         }
 
         .mensagem-relatorio,
         .erro-relatorio,
-        .diagnostico-relatorio {
+        .aviso-relatorio {
           padding: 15px 18px;
           margin: 16px 0;
           border-radius: 8px;
@@ -731,103 +694,123 @@ export default function Relatorios() {
           border: 1px solid #991b1b;
         }
 
-        .diagnostico-relatorio {
-          color: #dbeafe;
-          background: #172554;
-          border: 1px solid #1d4ed8;
+        .aviso-relatorio {
+          color: #fef3c7;
+          background: #422006;
+          border: 1px solid #92400e;
         }
 
         .relatorio-maquinas-grid {
           display: grid;
-          grid-template-columns: repeat(
-            auto-fit,
-            minmax(min(280px, 100%), 1fr)
-          );
-          gap: 18px;
-          margin-bottom: 30px;
+          grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+          gap: 14px;
+          margin: 24px 0 30px;
         }
 
         .relatorio-maquina-card {
-          width: 100%;
-          min-width: 0;
           display: flex;
-          align-items: center;
-          gap: 16px;
-          text-align: left;
-          padding: 20px;
-          border-radius: 12px;
+          align-items: stretch;
+          gap: 10px;
+          min-width: 0;
+          padding: 12px;
           border: 1px solid #334155;
+          border-radius: 12px;
           background: #162231;
-          cursor: pointer;
           color: white;
         }
 
-        .relatorio-maquina-card.ativo {
-          border-color: #f59e0b;
-          box-shadow: 0 0 0 1px #f59e0b;
+        .relatorio-selecionar {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex: 1;
+          min-width: 0;
+          padding: 6px;
+          border: 0;
+          background: transparent;
+          color: inherit;
+          text-align: left;
+          cursor: pointer;
         }
 
         .relatorio-card-icon {
-          flex: 0 0 55px;
-          width: 55px;
-          height: 55px;
           display: flex;
+          flex: 0 0 48px;
+          width: 48px;
+          height: 48px;
           align-items: center;
           justify-content: center;
-          font-size: 28px;
+          border-radius: 10px;
           background: #263445;
-          border-radius: 12px;
+          font-size: 26px;
         }
 
         .relatorio-card-texto {
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
           min-width: 0;
           overflow-wrap: anywhere;
         }
 
-        .relatorio-maquina-card h3 {
-          margin: 0 0 6px;
-          font-size: 17px;
+        .relatorio-card-texto strong {
+          font-size: 16px;
         }
 
-        .relatorio-maquina-card p {
-          margin: 0 0 10px;
+        .relatorio-card-texto > span:not(.status-operando):not(.status-manutencao):not(.status-parada) {
           color: #aab5c2;
-          font-size: 14px;
+          font-size: 13px;
         }
 
         .relatorio-card-texto small {
-          display: block;
-          margin-top: 9px;
           color: #cbd5e1;
+          font-size: 12px;
+        }
+
+        .btn-imprimir-card {
+          flex: 0 0 44px;
+          align-self: center;
+          width: 44px;
+          height: 44px;
+          border: 1px solid #d97706;
+          border-radius: 9px;
+          background: #d97706;
+          color: white;
+          font-size: 20px;
+          cursor: pointer;
+        }
+
+        .btn-imprimir-card:hover,
+        .btn-imprimir:hover {
+          background: #b45309;
         }
 
         .relatorio-documento {
-          background: #ffffff;
-          color: #111827;
-          padding: 45px;
-          border-radius: 12px;
-          margin-top: 30px;
-          margin-bottom: 40px;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
           min-width: 0;
+          margin: 30px 0 40px;
+          padding: 40px;
+          border-radius: 12px;
+          background: white;
+          color: #111827;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
         }
 
         .relatorio-cabecalho {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          gap: 30px;
+          gap: 24px;
         }
 
         .relatorio-cabecalho h1 {
+          margin: 0 0 8px;
           color: #b45309;
           font-size: 32px;
-          margin: 0 0 8px;
         }
 
         .relatorio-cabecalho p {
-          color: #374151;
           margin: 0;
+          color: #374151;
           font-size: 14px;
         }
 
@@ -836,20 +819,14 @@ export default function Relatorios() {
         }
 
         .relatorio-titulo h2 {
-          color: #111827;
           margin: 0 0 8px;
           font-size: 20px;
         }
 
-        .relatorio-titulo p {
-          color: #374151;
-          font-weight: 500;
-        }
-
         .relatorio-linha {
           height: 3px;
-          background: #d97706;
           margin: 25px 0;
+          background: #d97706;
         }
 
         .relatorio-nome-maquina {
@@ -857,13 +834,13 @@ export default function Relatorios() {
           justify-content: space-between;
           align-items: center;
           gap: 18px;
-          padding: 20px;
-          background: #f3f4f6;
-          border-left: 5px solid #d97706;
           margin-bottom: 25px;
+          padding: 20px;
+          border-left: 5px solid #d97706;
+          background: #f3f4f6;
         }
 
-        .relatorio-nome-maquina span {
+        .relatorio-nome-maquina > div:first-child > span {
           color: #4b5563;
           font-size: 12px;
           font-weight: bold;
@@ -871,19 +848,14 @@ export default function Relatorios() {
 
         .relatorio-nome-maquina h2 {
           margin: 6px 0 0;
-          color: #111827;
           overflow-wrap: anywhere;
         }
 
         .relatorio-status {
           display: flex;
           flex-direction: column;
-          gap: 8px;
           align-items: flex-end;
-        }
-
-        .relatorio-status strong {
-          color: #374151;
+          gap: 8px;
         }
 
         .relatorio-acoes {
@@ -893,63 +865,62 @@ export default function Relatorios() {
         }
 
         .btn-imprimir {
+          padding: 13px 22px;
+          border: 0;
+          border-radius: 8px;
           background: #d97706;
           color: white;
-          border: none;
-          padding: 13px 22px;
-          border-radius: 8px;
+          font-size: 15px;
           font-weight: bold;
           cursor: pointer;
-          font-size: 15px;
         }
 
         .relatorio-secao {
-          margin-top: 30px;
-          margin-bottom: 30px;
+          margin: 30px 0;
         }
 
         .relatorio-secao h3 {
+          margin-bottom: 20px;
+          padding-bottom: 10px;
+          border-bottom: 2px solid #d1d5db;
           color: #111827;
           font-size: 18px;
-          border-bottom: 2px solid #d1d5db;
-          padding-bottom: 10px;
-          margin-bottom: 20px;
         }
 
         .foto-principal-container {
-          width: 100%;
           display: flex;
           justify-content: center;
+          width: 100%;
         }
 
         .foto-principal-relatorio {
           max-width: 100%;
           max-height: 500px;
           object-fit: contain;
-          border-radius: 8px;
           border: 1px solid #9ca3af;
+          border-radius: 8px;
         }
 
         .dados-maquina-grid {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 15px;
+          gap: 12px;
         }
 
         .dado-item {
           min-width: 0;
-          background: #f8fafc;
+          padding: 14px;
           border: 1px solid #d1d5db;
           border-radius: 6px;
-          padding: 14px;
+          background: #f8fafc;
           overflow-wrap: anywhere;
         }
 
         .dado-item span {
           display: block;
+          margin-bottom: 6px;
           color: #374151;
           font-size: 12px;
-          margin-bottom: 6px;
           font-weight: 600;
         }
 
@@ -957,44 +928,33 @@ export default function Relatorios() {
           display: block;
           color: #111827;
           font-size: 15px;
-          font-weight: 700;
-        }
-
-        .observacoes-relatorio {
-          background: #fffbeb;
-          border-left: 4px solid #d97706;
-          padding: 18px;
-          color: #1f2937;
-          white-space: pre-wrap;
-          line-height: 1.6;
-          font-weight: 500;
         }
 
         .historico-lista {
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 18px;
         }
 
         .historico-item {
           display: flex;
-          gap: 15px;
-          border: 1px solid #d1d5db;
-          padding: 18px;
-          border-radius: 8px;
+          gap: 14px;
           min-width: 0;
+          padding: 16px;
+          border: 1px solid #d1d5db;
+          border-radius: 8px;
         }
 
         .historico-numero {
-          flex: 0 0 38px;
-          width: 38px;
-          height: 38px;
-          border-radius: 50%;
           display: flex;
+          flex: 0 0 36px;
+          width: 36px;
+          height: 36px;
           align-items: center;
           justify-content: center;
+          border-radius: 50%;
           background: #d97706;
-          color: #ffffff;
+          color: white;
           font-weight: bold;
         }
 
@@ -1005,18 +965,16 @@ export default function Relatorios() {
         }
 
         .historico-data {
-          color: #111827;
           margin-bottom: 10px;
+          color: #111827;
           font-size: 14px;
-          font-weight: 600;
         }
 
         .historico-descricao {
           color: #1f2937;
-          line-height: 1.6;
           font-size: 15px;
+          line-height: 1.6;
           white-space: pre-wrap;
-          font-weight: 500;
         }
 
         .historico-detalhes {
@@ -1034,23 +992,20 @@ export default function Relatorios() {
         }
 
         .fotos-servico-relatorio h4 {
-          color: #111827;
           margin: 0 0 12px;
+          color: #111827;
         }
 
         .galeria-relatorio {
           display: grid;
-          grid-template-columns: repeat(
-            auto-fit,
-            minmax(min(220px, 100%), 1fr)
-          );
-          gap: 15px;
+          grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+          gap: 14px;
         }
 
         .galeria-item {
           min-width: 0;
-          border: 1px solid #d1d5db;
           padding: 5px;
+          border: 1px solid #d1d5db;
           border-radius: 6px;
           break-inside: avoid;
         }
@@ -1071,40 +1026,40 @@ export default function Relatorios() {
         }
 
         .sem-historico {
-          padding: 25px;
+          padding: 24px;
+          border-radius: 6px;
           background: #f3f4f6;
           color: #374151;
           text-align: center;
-          border-radius: 6px;
-          font-weight: 500;
         }
 
         .sem-maquinas {
-          padding: 30px;
+          padding: 25px;
           border: 1px dashed #64748b;
           border-radius: 10px;
           color: #cbd5e1;
         }
 
         .relatorio-rodape {
-          border-top: 2px solid #d1d5db;
-          margin-top: 50px;
-          padding-top: 20px;
           display: flex;
           justify-content: space-between;
           gap: 20px;
+          margin-top: 45px;
+          padding-top: 18px;
+          border-top: 2px solid #d1d5db;
           color: #374151;
           font-size: 12px;
         }
 
-        .relatorio-rodape strong {
-          color: #111827;
+        .relatorio-rodape p {
+          margin: 5px 0 0;
         }
 
         .status-operando,
         .status-manutencao,
         .status-parada {
           display: inline-block;
+          width: fit-content;
           padding: 4px 9px;
           border-radius: 6px;
           font-size: 12px;
@@ -1128,7 +1083,7 @@ export default function Relatorios() {
 
         @media (max-width: 700px) {
           .relatorio-documento {
-            padding: 20px;
+            padding: 18px;
           }
 
           .relatorio-cabecalho,
@@ -1152,57 +1107,46 @@ export default function Relatorios() {
         }
 
         @media print {
-          * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
+          @page {
+            size: A4;
+            margin: 15mm;
           }
 
           body {
             background: white !important;
-            color: #000000 !important;
+            color: #111 !important;
           }
 
           .no-print,
-          .mastermec-app > .sidebar,
           nav,
           button {
             display: none !important;
           }
 
-          .mastermec-app {
-            background: white !important;
-            padding: 0 !important;
-            margin: 0 !important;
-          }
-
+          .mastermec-app,
           .page-container {
             width: 100% !important;
             max-width: none !important;
-            padding: 0 !important;
             margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
           }
 
           .relatorio-documento {
             display: block !important;
-            background: white !important;
-            color: #000000 !important;
-            box-shadow: none !important;
-            border-radius: 0 !important;
-            padding: 10px !important;
-            margin: 0 !important;
             width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
+            background: white !important;
+            color: #111 !important;
+            box-shadow: none !important;
           }
 
-          .relatorio-documento,
-          .relatorio-documento p,
-          .relatorio-documento span,
-          .relatorio-documento div,
-          .relatorio-documento strong,
-          .relatorio-documento h1,
-          .relatorio-documento h2,
-          .relatorio-documento h3,
-          .relatorio-documento h4 {
-            color: #111111 !important;
+          .relatorio-documento * {
+            color: #111 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
 
           .relatorio-cabecalho h1 {
@@ -1214,43 +1158,24 @@ export default function Relatorios() {
           }
 
           .relatorio-nome-maquina {
-            background: #eeeeee !important;
-            border-left-color: #b45309 !important;
-          }
-
-          .dado-item {
-            background: #f5f5f5 !important;
-            border-color: #999999 !important;
-          }
-
-          .observacoes-relatorio {
-            background: #f8f8f8 !important;
+            background: #eee !important;
             border-left-color: #b45309 !important;
           }
 
           .historico-numero {
             background: #b45309 !important;
-            color: #ffffff !important;
+            color: white !important;
           }
 
-          .sem-historico {
-            background: #eeeeee !important;
+          .historico-item,
+          .galeria-item,
+          .relatorio-secao {
+            break-inside: avoid;
           }
 
           img {
             max-width: 100% !important;
             break-inside: avoid !important;
-          }
-
-          .relatorio-secao,
-          .historico-item,
-          .galeria-item {
-            break-inside: avoid;
-          }
-
-          @page {
-            size: A4;
-            margin: 15mm;
           }
         }
       `}</style>
