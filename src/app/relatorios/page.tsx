@@ -21,6 +21,7 @@ type ServicoRelatorio = {
 
 type HistoricoRelatorio = {
   id?: number | string;
+  maquina?: string | null;
   data?: string;
   descricao?: string;
   defeito?: string;
@@ -59,6 +60,15 @@ function texto(valor: unknown): string {
   return String(valor);
 }
 
+function normalizarNome(valor: unknown): string {
+  return texto(valor)
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
 function arraySeguro(valor: unknown): unknown[] {
   if (Array.isArray(valor)) return valor;
 
@@ -78,6 +88,7 @@ function formatarData(data?: string): string {
   if (!data) return "Não informada";
 
   const partes = data.split("-");
+
   if (partes.length === 3 && partes[0].length === 4) {
     return `${partes[2].slice(0, 2)}/${partes[1]}/${partes[0]}`;
   }
@@ -89,7 +100,10 @@ function obterFotos(valor: unknown): FotoRelatorio[] {
   return arraySeguro(valor)
     .map((item, index) => {
       if (typeof item === "string") {
-        return { id: index, imagem: item };
+        return {
+          id: index,
+          imagem: item,
+        };
       }
 
       if (!item || typeof item !== "object") return null;
@@ -131,6 +145,8 @@ export default function RelatoriosPage() {
   const idParam = searchParams.get("id");
 
   const [maquinas, setMaquinas] = useState<EquipamentoRelatorio[]>([]);
+  const [manutencoesBanco, setManutencoesBanco] =
+    useState<HistoricoRelatorio[]>([]);
   const [selecionada, setSelecionada] =
     useState<EquipamentoRelatorio | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -143,24 +159,57 @@ export default function RelatoriosPage() {
       setCarregando(true);
       setErro("");
 
-      const { data, error } = await supabase
-        .from("equipamentos")
-        .select("*")
-        .order("id", { ascending: true });
+      const [resEquipamentos, resManutencoes] = await Promise.all([
+        supabase
+          .from("equipamentos")
+          .select("*")
+          .order("id", { ascending: true }),
+
+        supabase
+          .from("manutencoes")
+          .select("*")
+          .order("id", { ascending: false }),
+      ]);
 
       if (!ativo) return;
 
-      if (error) {
-        console.error("Erro ao carregar equipamentos:", error);
-        setErro("Erro ao carregar máquinas: " + error.message);
+      if (resEquipamentos.error) {
+        console.error(
+          "Erro ao carregar equipamentos:",
+          resEquipamentos.error
+        );
+
+        setErro(
+          "Erro ao carregar máquinas: " + resEquipamentos.error.message
+        );
         setMaquinas([]);
+        setManutencoesBanco([]);
         setSelecionada(null);
         setCarregando(false);
         return;
       }
 
-      const lista = (data || []) as EquipamentoRelatorio[];
+      const lista = (resEquipamentos.data ||
+        []) as EquipamentoRelatorio[];
+
       setMaquinas(lista);
+
+      if (resManutencoes.error) {
+        console.error(
+          "Erro ao carregar manutenções:",
+          resManutencoes.error
+        );
+
+        setManutencoesBanco([]);
+        setErro(
+          "As máquinas foram carregadas, mas não foi possível buscar as manutenções: " +
+            resManutencoes.error.message
+        );
+      } else {
+        setManutencoesBanco(
+          (resManutencoes.data || []) as HistoricoRelatorio[]
+        );
+      }
 
       if (idParam) {
         const encontrada = lista.find(
@@ -193,6 +242,7 @@ export default function RelatoriosPage() {
 
   function escolherMaquina(maquina: EquipamentoRelatorio) {
     setSelecionada(maquina);
+
     window.history.replaceState(
       null,
       "",
@@ -201,7 +251,11 @@ export default function RelatoriosPage() {
   }
 
   const historico = selecionada
-    ? obterHistorico(selecionada.historico)
+    ? manutencoesBanco.filter(
+        (item) =>
+          normalizarNome(item.maquina) ===
+          normalizarNome(selecionada.nome)
+      )
     : [];
 
   const fotosMaquina = selecionada
@@ -218,11 +272,13 @@ export default function RelatoriosPage() {
         <header className="page-header">
           <div>
             <h1>📊 Relatórios</h1>
-            <p>Selecione uma máquina para visualizar e imprimir o relatório.</p>
+            <p>
+              Selecione uma máquina para visualizar e imprimir o relatório.
+            </p>
           </div>
         </header>
 
-        {carregando && <p>Carregando máquinas...</p>}
+        {carregando && <p>Carregando máquinas e manutenções...</p>}
 
         {erro && <div className="erro">{erro}</div>}
 
@@ -232,30 +288,40 @@ export default function RelatoriosPage() {
 
         {!carregando && maquinas.length > 0 && (
           <div className="lista-maquinas">
-            {maquinas.map((maquina) => (
-              <button
-                key={maquina.id}
-                type="button"
-                className={
-                  selecionada?.id === maquina.id
-                    ? "maquina-card selecionada"
-                    : "maquina-card"
-                }
-                onClick={() => escolherMaquina(maquina)}
-              >
-                <span className="icone-maquina">🚜</span>
-                <span className="maquina-texto">
-                  <strong>{maquina.nome || "Máquina sem nome"}</strong>
-                  <small>
-                    {maquina.fabricante || ""} {maquina.modelo || ""}
-                  </small>
-                  <small>
-                    {obterHistorico(maquina.historico).length} registro(s)
-                    no histórico
-                  </small>
-                </span>
-              </button>
-            ))}
+            {maquinas.map((maquina) => {
+              const quantidadeRegistros = manutencoesBanco.filter(
+                (item) =>
+                  normalizarNome(item.maquina) ===
+                  normalizarNome(maquina.nome)
+              ).length;
+
+              return (
+                <button
+                  key={maquina.id}
+                  type="button"
+                  className={
+                    selecionada?.id === maquina.id
+                      ? "maquina-card selecionada"
+                      : "maquina-card"
+                  }
+                  onClick={() => escolherMaquina(maquina)}
+                >
+                  <span className="icone-maquina">🚜</span>
+
+                  <span className="maquina-texto">
+                    <strong>{maquina.nome || "Máquina sem nome"}</strong>
+
+                    <small>
+                      {maquina.fabricante || ""} {maquina.modelo || ""}
+                    </small>
+
+                    <small>
+                      {quantidadeRegistros} registro(s) de manutenção
+                    </small>
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -267,6 +333,7 @@ export default function RelatoriosPage() {
               <h1>MasterMec</h1>
               <p>Gestão e Manutenção de Máquinas</p>
             </div>
+
             <div className="titulo-relatorio">
               <h2>RELATÓRIO TÉCNICO</h2>
               <p>Emissão: {new Date().toLocaleDateString("pt-BR")}</p>
@@ -280,6 +347,7 @@ export default function RelatoriosPage() {
               <small>RELATÓRIO DA MÁQUINA</small>
               <h2>🚜 {selecionada.nome || "Máquina sem nome"}</h2>
             </div>
+
             <div>
               <strong>Status</strong>
               <p>{selecionada.status || "Não informado"}</p>
@@ -295,6 +363,7 @@ export default function RelatoriosPage() {
           {selecionada.foto && (
             <section className="secao">
               <h3>📷 Foto da Máquina</h3>
+
               <img
                 className="foto-principal"
                 src={selecionada.foto}
@@ -305,22 +374,68 @@ export default function RelatoriosPage() {
 
           <section className="secao">
             <h3>📋 Dados Técnicos</h3>
+
             <div className="dados-grid">
-              <div><span>Nome</span><strong>{selecionada.nome || "-"}</strong></div>
-              <div><span>Fabricante</span><strong>{selecionada.fabricante || "-"}</strong></div>
-              <div><span>Modelo</span><strong>{selecionada.modelo || "-"}</strong></div>
-              <div><span>Ano</span><strong>{texto(selecionada.ano) || "-"}</strong></div>
-              <div><span>Número de Série</span><strong>{selecionada.numero_serie || selecionada.numeroSerie || "-"}</strong></div>
-              <div><span>Horímetro</span><strong>{texto(selecionada.horimetro) || "-"}</strong></div>
-              <div><span>Tipo</span><strong>{selecionada.tipo || selecionada.tipo_maquina || "-"}</strong></div>
-              <div><span>Próxima Manutenção</span><strong>{formatarData(selecionada.proxima_manutencao || selecionada.proximaManutencao || "")}</strong></div>
+              <div>
+                <span>Nome</span>
+                <strong>{selecionada.nome || "-"}</strong>
+              </div>
+
+              <div>
+                <span>Fabricante</span>
+                <strong>{selecionada.fabricante || "-"}</strong>
+              </div>
+
+              <div>
+                <span>Modelo</span>
+                <strong>{selecionada.modelo || "-"}</strong>
+              </div>
+
+              <div>
+                <span>Ano</span>
+                <strong>{texto(selecionada.ano) || "-"}</strong>
+              </div>
+
+              <div>
+                <span>Número de Série</span>
+                <strong>
+                  {selecionada.numero_serie ||
+                    selecionada.numeroSerie ||
+                    "-"}
+                </strong>
+              </div>
+
+              <div>
+                <span>Horímetro</span>
+                <strong>{texto(selecionada.horimetro) || "-"}</strong>
+              </div>
+
+              <div>
+                <span>Tipo</span>
+                <strong>
+                  {selecionada.tipo || selecionada.tipo_maquina || "-"}
+                </strong>
+              </div>
+
+              <div>
+                <span>Próxima Manutenção</span>
+                <strong>
+                  {formatarData(
+                    selecionada.proxima_manutencao ||
+                      selecionada.proximaManutencao ||
+                      ""
+                  )}
+                </strong>
+              </div>
             </div>
           </section>
 
           {selecionada.observacoes && (
             <section className="secao">
               <h3>📝 Observações Gerais</h3>
-              <div className="observacoes">{selecionada.observacoes}</div>
+              <div className="observacoes">
+                {selecionada.observacoes}
+              </div>
             </section>
           )}
 
@@ -329,7 +444,8 @@ export default function RelatoriosPage() {
 
             {historico.length === 0 ? (
               <div className="sem-historico">
-                Nenhuma manutenção registrada no campo histórico desta máquina.
+                Nenhuma manutenção encontrada para esta máquina na tabela
+                manutencoes.
               </div>
             ) : (
               <div className="historico-lista">
@@ -338,10 +454,17 @@ export default function RelatoriosPage() {
                   const fotosDoRegistro = obterFotos(item.fotos);
 
                   return (
-                    <div className="historico-item" key={item.id ?? index}>
+                    <div
+                      className="historico-item"
+                      key={item.id ?? index}
+                    >
                       <div className="numero">{index + 1}</div>
+
                       <div className="historico-conteudo">
-                        <p><strong>Data:</strong> {formatarData(item.data)}</p>
+                        <p>
+                          <strong>Data:</strong>{" "}
+                          {formatarData(item.data)}
+                        </p>
 
                         <p className="descricao">
                           {item.descricao ||
@@ -350,19 +473,46 @@ export default function RelatoriosPage() {
                             "Serviço registrado"}
                         </p>
 
-                        {item.tipo && <p><strong>Tipo:</strong> {item.tipo}</p>}
-                        {item.mecanico && <p><strong>Mecânico:</strong> {item.mecanico}</p>}
-                        {item.horimetro !== undefined && item.horimetro !== null && (
-                          <p><strong>Horímetro:</strong> {texto(item.horimetro)}</p>
+                        {item.tipo && (
+                          <p>
+                            <strong>Tipo:</strong> {item.tipo}
+                          </p>
                         )}
-                        {item.prioridade && <p><strong>Prioridade:</strong> {item.prioridade}</p>}
-                        {item.status && <p><strong>Status:</strong> {item.status}</p>}
+
+                        {item.mecanico && (
+                          <p>
+                            <strong>Mecânico:</strong> {item.mecanico}
+                          </p>
+                        )}
+
+                        {item.horimetro !== undefined &&
+                          item.horimetro !== null && (
+                            <p>
+                              <strong>Horímetro:</strong>{" "}
+                              {texto(item.horimetro)}
+                            </p>
+                          )}
+
+                        {item.prioridade && (
+                          <p>
+                            <strong>Prioridade:</strong>{" "}
+                            {item.prioridade}
+                          </p>
+                        )}
+
+                        {item.status && (
+                          <p>
+                            <strong>Status:</strong> {item.status}
+                          </p>
+                        )}
 
                         {servicos.map((servico, servicoIndex) => {
                           const fotosServico = obterFotos(servico.fotos);
 
                           return (
-                            <div key={servico.id ?? servicoIndex}>
+                            <div
+                              key={servico.id ?? servicoIndex}
+                            >
                               {servico.descricao && (
                                 <p className="descricao">
                                   {servico.descricao}
@@ -371,12 +521,27 @@ export default function RelatoriosPage() {
 
                               {fotosServico.length > 0 && (
                                 <div className="galeria">
-                                  {fotosServico.map((foto, fotoIndex) => (
-                                    <figure key={foto.id ?? fotoIndex}>
-                                      <img src={foto.imagem} alt={foto.descricao || "Foto do serviço"} />
-                                      {foto.descricao && <figcaption>{foto.descricao}</figcaption>}
-                                    </figure>
-                                  ))}
+                                  {fotosServico.map(
+                                    (foto, fotoIndex) => (
+                                      <figure
+                                        key={foto.id ?? fotoIndex}
+                                      >
+                                        <img
+                                          src={foto.imagem}
+                                          alt={
+                                            foto.descricao ||
+                                            "Foto do serviço"
+                                          }
+                                        />
+
+                                        {foto.descricao && (
+                                          <figcaption>
+                                            {foto.descricao}
+                                          </figcaption>
+                                        )}
+                                      </figure>
+                                    )
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -387,8 +552,19 @@ export default function RelatoriosPage() {
                           <div className="galeria">
                             {fotosDoRegistro.map((foto, fotoIndex) => (
                               <figure key={foto.id ?? fotoIndex}>
-                                <img src={foto.imagem} alt={foto.descricao || "Foto da manutenção"} />
-                                {foto.descricao && <figcaption>{foto.descricao}</figcaption>}
+                                <img
+                                  src={foto.imagem}
+                                  alt={
+                                    foto.descricao ||
+                                    "Foto da manutenção"
+                                  }
+                                />
+
+                                {foto.descricao && (
+                                  <figcaption>
+                                    {foto.descricao}
+                                  </figcaption>
+                                )}
                               </figure>
                             ))}
                           </div>
@@ -404,11 +580,21 @@ export default function RelatoriosPage() {
           {fotosMaquina.length > 0 && (
             <section className="secao">
               <h3>📸 Fotos da Máquina</h3>
+
               <div className="galeria">
                 {fotosMaquina.map((foto, index) => (
                   <figure key={foto.id ?? index}>
-                    <img src={foto.imagem} alt={foto.descricao || `Foto ${index + 1} da máquina`} />
-                    {foto.descricao && <figcaption>{foto.descricao}</figcaption>}
+                    <img
+                      src={foto.imagem}
+                      alt={
+                        foto.descricao ||
+                        `Foto ${index + 1} da máquina`
+                      }
+                    />
+
+                    {foto.descricao && (
+                      <figcaption>{foto.descricao}</figcaption>
+                    )}
                   </figure>
                 ))}
               </div>
@@ -459,7 +645,10 @@ export default function RelatoriosPage() {
 
         .lista-maquinas {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+          grid-template-columns: repeat(
+            auto-fit,
+            minmax(min(280px, 100%), 1fr)
+          );
           gap: 12px;
           margin-bottom: 28px;
         }
@@ -661,7 +850,10 @@ export default function RelatoriosPage() {
 
         .galeria {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+          grid-template-columns: repeat(
+            auto-fit,
+            minmax(min(200px, 100%), 1fr)
+          );
           gap: 12px;
           margin-top: 14px;
         }
