@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { supabase } from "../../lib/supabase";
+import { supabase } from "@/lib/supabase";
 
 type FotoRelatorio = {
   id?: number | string;
@@ -26,22 +26,22 @@ type HistoricoRelatorio = {
 type MaquinaRelatorio = {
   id: number;
   nome: string;
-  fabricante?: string;
-  modelo?: string;
-  ano?: string;
-  numeroSerie?: string;
-  horimetro?: string;
-  status?: string;
-  tipo?: string;
-  proximaManutencao?: string;
-  observacoes?: string;
-  foto?: string;
+  fabricante: string;
+  modelo: string;
+  ano: string;
+  numeroSerie: string;
+  horimetro: string;
+  status: string;
+  tipo: string;
+  proximaManutencao: string;
+  observacoes: string;
+  foto: string;
   fotos: string[];
   historico: HistoricoRelatorio[];
 };
 
 type EquipamentoBanco = {
-  id: number;
+  id: number | string;
   nome?: string | null;
   fabricante?: string | null;
   modelo?: string | null;
@@ -53,6 +53,7 @@ type EquipamentoBanco = {
   tipo?: string | null;
   tipo_maquina?: string | null;
   proxima_manutencao?: string | null;
+  "proxima-manutencao"?: string | null;
   proximaManutencao?: string | null;
   observacoes?: string | null;
   foto?: string | null;
@@ -66,8 +67,8 @@ type ServicoBanco = {
 };
 
 type ManutencaoBanco = {
-  id: number;
-  equipamento_id?: number | null;
+  id: number | string;
+  equipamento_id?: number | string | null;
   maquina?: string | null;
   tipo?: string | null;
   mecanico?: string | null;
@@ -83,6 +84,14 @@ type ManutencaoBanco = {
 function texto(valor: unknown): string {
   if (valor === null || valor === undefined) return "";
   return String(valor);
+}
+
+function normalizarNome(nome?: string | null): string {
+  return (nome || "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR");
 }
 
 function listaFotos(valor: unknown): FotoRelatorio[] {
@@ -137,6 +146,15 @@ function listaFotosMaquina(valor: unknown): string[] {
     .filter(Boolean);
 }
 
+function obterServicos(valor: unknown): ServicoBanco[] {
+  if (!Array.isArray(valor)) return [];
+
+  return valor.filter(
+    (item): item is ServicoBanco =>
+      Boolean(item) && typeof item === "object"
+  );
+}
+
 function formatarData(data?: string): string {
   if (!data) return "Não informada";
 
@@ -148,43 +166,26 @@ function formatarData(data?: string): string {
   return data;
 }
 
-function normalizarNome(nome?: string | null): string {
-  return (nome || "").trim().toLocaleLowerCase("pt-BR");
-}
-
-function obterServicos(valor: unknown): ServicoBanco[] {
-  if (!Array.isArray(valor)) return [];
-
-  return valor.filter(
-    (item): item is ServicoBanco =>
-      Boolean(item) && typeof item === "object"
-  );
-}
-
-/*
- * CORREÇÃO:
- * A manutenção pode estar vinculada pelo equipamento_id ou somente
- * pelo nome da máquina. Agora o relatório aceita qualquer um dos dois.
- */
 function obterHistoricoDaMaquina(
   equipamento: EquipamentoBanco,
   manutencoes: ManutencaoBanco[]
 ): HistoricoRelatorio[] {
   const nomeEquipamento = normalizarNome(equipamento.nome);
 
-  const manutencoesDaMaquina = manutencoes.filter((manutencao) => {
+  const registros = manutencoes.filter((manutencao) => {
     const mesmoId =
       manutencao.equipamento_id !== null &&
       manutencao.equipamento_id !== undefined &&
-      Number(manutencao.equipamento_id) === Number(equipamento.id);
+      String(manutencao.equipamento_id) === String(equipamento.id);
 
     const mesmoNome =
+      Boolean(nomeEquipamento) &&
       normalizarNome(manutencao.maquina) === nomeEquipamento;
 
     return mesmoId || mesmoNome;
   });
 
-  return manutencoesDaMaquina.flatMap((manutencao) => {
+  return registros.flatMap((manutencao) => {
     const servicos = obterServicos(manutencao.servicos);
 
     const servicosParaExibir =
@@ -193,32 +194,66 @@ function obterHistoricoDaMaquina(
         : [
             {
               descricao:
-                manutencao.defeito || "Manutenção registrada",
+                manutencao.defeito ||
+                manutencao.observacao ||
+                "Manutenção registrada",
             },
           ];
 
-    return servicosParaExibir.map((servico, indice) => {
-      const fotos = listaFotos(servico.fotos);
-
-      const descricao =
+    return servicosParaExibir.map((servico, indice) => ({
+      id: `${manutencao.id}-${indice}`,
+      data: manutencao.data || "",
+      descricao:
         texto(servico.descricao).trim() ||
         texto(manutencao.defeito).trim() ||
         texto(manutencao.observacao).trim() ||
-        "Serviço realizado";
-
-      return {
-        id: `${manutencao.id}-${indice}`,
-        data: manutencao.data || "",
-        descricao,
-        tipo: manutencao.tipo || "",
-        mecanico: manutencao.mecanico || "",
-        horimetro: texto(manutencao.horimetro),
-        prioridade: manutencao.prioridade || "",
-        status: manutencao.status || "",
-        fotos,
-      };
-    });
+        "Serviço realizado",
+      tipo: manutencao.tipo || "",
+      mecanico: manutencao.mecanico || "",
+      horimetro: texto(manutencao.horimetro),
+      prioridade: manutencao.prioridade || "",
+      status: manutencao.status || "",
+      fotos: listaFotos(servico.fotos),
+    }));
   });
+}
+
+function formatarEquipamento(
+  equipamento: EquipamentoBanco,
+  manutencoes: ManutencaoBanco[]
+): MaquinaRelatorio {
+  return {
+    id: Number(equipamento.id),
+    nome: equipamento.nome || "Máquina sem nome",
+    fabricante: equipamento.fabricante || "",
+    modelo: equipamento.modelo || "",
+    ano: texto(equipamento.ano),
+    numeroSerie:
+      equipamento.numero_serie ||
+      equipamento.numeroSerie ||
+      "",
+    horimetro: texto(equipamento.horimetro),
+    status: equipamento.status || "",
+    tipo:
+      equipamento.tipo ||
+      equipamento.tipo_maquina ||
+      "",
+    proximaManutencao:
+      equipamento.proxima_manutencao ||
+      equipamento["proxima-manutencao"] ||
+      equipamento.proximaManutencao ||
+      "",
+    observacoes: equipamento.observacoes || "",
+    foto: equipamento.foto || "",
+    fotos: listaFotosMaquina(equipamento.fotos),
+    historico: obterHistoricoDaMaquina(equipamento, manutencoes),
+  };
+}
+
+function classeStatus(status?: string): string {
+  if (status === "Operando") return "status-operando";
+  if (status === "Em Manutenção") return "status-manutencao";
+  return "status-parada";
 }
 
 export default function Relatorios() {
@@ -227,89 +262,67 @@ export default function Relatorios() {
     useState<MaquinaRelatorio | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
+  const [diagnostico, setDiagnostico] = useState("");
 
-  useEffect(() => {
-    let ativo = true;
+  const carregarDados = useCallback(async () => {
+    setCarregando(true);
+    setErro("");
+    setDiagnostico("");
 
-    async function carregarDados() {
-      setCarregando(true);
-      setErro("");
-
-      const [equipamentosResposta, manutencoesResposta] =
-        await Promise.all([
-          supabase
-            .from("equipamentos")
-            .select("*")
-            .order("id", { ascending: true }),
-          supabase
-            .from("manutencoes")
-            .select("*")
-            .order("data", { ascending: false }),
-        ]);
-
-      if (!ativo) return;
+    try {
+      const equipamentosResposta = await supabase
+        .from("equipamentos")
+        .select("*")
+        .order("id", { ascending: true });
 
       if (equipamentosResposta.error) {
         console.error(
           "Erro ao carregar equipamentos:",
           equipamentosResposta.error
         );
+
         setErro(
-          `Não foi possível carregar as máquinas: ${equipamentosResposta.error.message}`
+          `O Supabase retornou um erro ao buscar equipamentos: ${equipamentosResposta.error.message}`
         );
         setMaquinas([]);
-        setCarregando(false);
+        setMaquinaSelecionada(null);
         return;
       }
+
+      const equipamentos = (equipamentosResposta.data ||
+        []) as EquipamentoBanco[];
+
+      if (equipamentos.length === 0) {
+        setDiagnostico(
+          "A consulta à tabela public.equipamentos foi concluída, mas retornou 0 registros. Confira se o site está usando o mesmo projeto Supabase mostrado no Table Editor e se as permissões de leitura permitem acessar os registros."
+        );
+        setMaquinas([]);
+        setMaquinaSelecionada(null);
+        return;
+      }
+
+      const manutencoesResposta = await supabase
+        .from("manutencoes")
+        .select("*")
+        .order("data", { ascending: false });
 
       if (manutencoesResposta.error) {
         console.error(
           "Erro ao carregar manutenções:",
           manutencoesResposta.error
         );
+
         setErro(
-          `Não foi possível carregar as manutenções: ${manutencoesResposta.error.message}`
+          `As máquinas foram encontradas, mas houve um erro ao buscar as manutenções: ${manutencoesResposta.error.message}`
         );
-        setMaquinas([]);
-        setCarregando(false);
-        return;
       }
 
-      const equipamentos =
-        (equipamentosResposta.data || []) as EquipamentoBanco[];
+      const manutencoes = (manutencoesResposta.data ||
+        []) as ManutencaoBanco[];
 
-      const manutencoes =
-        (manutencoesResposta.data || []) as ManutencaoBanco[];
-
-      const maquinasFormatadas: MaquinaRelatorio[] =
-        equipamentos.map((equipamento) => ({
-          id: equipamento.id,
-          nome: equipamento.nome || "Máquina sem nome",
-          fabricante: equipamento.fabricante || "",
-          modelo: equipamento.modelo || "",
-          ano: texto(equipamento.ano),
-          numeroSerie:
-            equipamento.numero_serie ||
-            equipamento.numeroSerie ||
-            "",
-          horimetro: texto(equipamento.horimetro),
-          status: equipamento.status || "",
-          tipo:
-            equipamento.tipo ||
-            equipamento.tipo_maquina ||
-            "",
-          proximaManutencao:
-            equipamento.proxima_manutencao ||
-            equipamento.proximaManutencao ||
-            "",
-          observacoes: equipamento.observacoes || "",
-          foto: equipamento.foto || "",
-          fotos: listaFotosMaquina(equipamento.fotos),
-          historico: obterHistoricoDaMaquina(
-            equipamento,
-            manutencoes
-          ),
-        }));
+      const maquinasFormatadas = equipamentos.map((equipamento) =>
+        formatarEquipamento(equipamento, manutencoes)
+      );
 
       setMaquinas(maquinasFormatadas);
 
@@ -323,24 +336,30 @@ export default function Relatorios() {
         );
       });
 
+      setDiagnostico(
+        `Consulta concluída: ${equipamentos.length} máquina(s) recebida(s) da tabela equipamentos e ${manutencoes.length} registro(s) de manutenção recebido(s).`
+      );
+    } catch (erroDesconhecido) {
+      console.error("Erro inesperado no relatório:", erroDesconhecido);
+
+      setErro(
+        erroDesconhecido instanceof Error
+          ? erroDesconhecido.message
+          : "Ocorreu um erro inesperado ao carregar o relatório."
+      );
+      setMaquinas([]);
+      setMaquinaSelecionada(null);
+    } finally {
       setCarregando(false);
     }
-
-    carregarDados();
-
-    return () => {
-      ativo = false;
-    };
   }, []);
+
+  useEffect(() => {
+    void carregarDados();
+  }, [carregarDados]);
 
   function imprimirRelatorio() {
     window.print();
-  }
-
-  function classeStatus(status?: string) {
-    if (status === "Operando") return "status-operando";
-    if (status === "Em Manutenção") return "status-manutencao";
-    return "status-parada";
   }
 
   return (
@@ -352,7 +371,7 @@ export default function Relatorios() {
               ← Voltar ao Dashboard
             </Link>
 
-            <div className="page-header">
+            <header className="page-header">
               <div>
                 <h1>📊 Relatórios</h1>
                 <p>
@@ -360,7 +379,16 @@ export default function Relatorios() {
                   manutenção
                 </p>
               </div>
-            </div>
+
+              <button
+                type="button"
+                className="btn-atualizar"
+                onClick={() => void carregarDados()}
+                disabled={carregando}
+              >
+                {carregando ? "Carregando..." : "↻ Atualizar"}
+              </button>
+            </header>
 
             <div className="relatorio-introducao">
               <h2>Selecione uma máquina</h2>
@@ -382,11 +410,18 @@ export default function Relatorios() {
               </div>
             )}
 
+            {diagnostico && (
+              <div className="diagnostico-relatorio" role="status">
+                {diagnostico}
+              </div>
+            )}
+
             {!carregando && !erro && maquinas.length === 0 && (
               <div className="sem-maquinas">
-                <h3>Nenhuma máquina cadastrada</h3>
+                <h3>Nenhuma máquina recebida pelo relatório</h3>
                 <p>
-                  Cadastre máquinas primeiro para gerar relatórios.
+                  As máquinas aparecem no cadastro, mas esta consulta
+                  não recebeu registros. Confira o diagnóstico acima.
                 </p>
               </div>
             )}
@@ -411,9 +446,7 @@ export default function Relatorios() {
                       <p>
                         {maquina.fabricante} {maquina.modelo}
                       </p>
-                      <span
-                        className={classeStatus(maquina.status)}
-                      >
+                      <span className={classeStatus(maquina.status)}>
                         {maquina.status || "Sem status"}
                       </span>
                       <small>
@@ -441,8 +474,7 @@ export default function Relatorios() {
                 <div className="relatorio-titulo">
                   <h2>RELATÓRIO TÉCNICO</h2>
                   <p>
-                    Emissão:{" "}
-                    {new Date().toLocaleDateString("pt-BR")}
+                    Emissão: {new Date().toLocaleDateString("pt-BR")}
                   </p>
                 </div>
               </div>
@@ -457,11 +489,7 @@ export default function Relatorios() {
 
                 <div className="relatorio-status">
                   <strong>Status</strong>
-                  <span
-                    className={classeStatus(
-                      maquinaSelecionada.status
-                    )}
-                  >
+                  <span className={classeStatus(maquinaSelecionada.status)}>
                     {maquinaSelecionada.status || "Não informado"}
                   </span>
                 </div>
@@ -498,47 +526,36 @@ export default function Relatorios() {
                     <span>Nome da Máquina</span>
                     <strong>{maquinaSelecionada.nome || "-"}</strong>
                   </div>
-
                   <div className="dado-item">
                     <span>Fabricante</span>
-                    <strong>
-                      {maquinaSelecionada.fabricante || "-"}
-                    </strong>
+                    <strong>{maquinaSelecionada.fabricante || "-"}</strong>
                   </div>
-
                   <div className="dado-item">
                     <span>Modelo</span>
                     <strong>{maquinaSelecionada.modelo || "-"}</strong>
                   </div>
-
                   <div className="dado-item">
                     <span>Ano</span>
                     <strong>{maquinaSelecionada.ano || "-"}</strong>
                   </div>
-
                   <div className="dado-item">
                     <span>Número de Série</span>
-                    <strong>
-                      {maquinaSelecionada.numeroSerie || "-"}
-                    </strong>
+                    <strong>{maquinaSelecionada.numeroSerie || "-"}</strong>
                   </div>
-
                   <div className="dado-item">
                     <span>Horímetro</span>
-                    <strong>
-                      {maquinaSelecionada.horimetro || "-"}
-                    </strong>
+                    <strong>{maquinaSelecionada.horimetro || "-"}</strong>
                   </div>
-
                   <div className="dado-item">
                     <span>Tipo de Máquina</span>
                     <strong>{maquinaSelecionada.tipo || "-"}</strong>
                   </div>
-
                   <div className="dado-item">
                     <span>Próxima Manutenção</span>
                     <strong>
-                      {maquinaSelecionada.proximaManutencao || "-"}
+                      {maquinaSelecionada.proximaManutencao
+                        ? formatarData(maquinaSelecionada.proximaManutencao)
+                        : "-"}
                     </strong>
                   </div>
                 </div>
@@ -558,90 +575,72 @@ export default function Relatorios() {
 
                 {maquinaSelecionada.historico.length > 0 ? (
                   <div className="historico-lista">
-                    {maquinaSelecionada.historico.map(
-                      (item, index) => (
-                        <div
-                          className="historico-item"
-                          key={item.id}
-                        >
-                          <div className="historico-numero">
-                            {index + 1}
+                    {maquinaSelecionada.historico.map((item, index) => (
+                      <div className="historico-item" key={item.id}>
+                        <div className="historico-numero">{index + 1}</div>
+
+                        <div className="historico-conteudo">
+                          <div className="historico-data">
+                            <strong>Data:</strong> {formatarData(item.data)}
                           </div>
 
-                          <div className="historico-conteudo">
-                            <div className="historico-data">
-                              <strong>Data:</strong>{" "}
-                              {formatarData(item.data)}
-                            </div>
+                          <div className="historico-descricao">
+                            {item.descricao || "Serviço realizado"}
+                          </div>
 
-                            <div className="historico-descricao">
-                              {item.descricao ||
-                                "Serviço realizado"}
-                            </div>
-
-                            <div className="historico-detalhes">
-                              {item.tipo && (
-                                <p>
-                                  <strong>Tipo:</strong> {item.tipo}
-                                </p>
-                              )}
-                              {item.mecanico && (
-                                <p>
-                                  <strong>Mecânico:</strong>{" "}
-                                  {item.mecanico}
-                                </p>
-                              )}
-                              {item.horimetro && (
-                                <p>
-                                  <strong>Horímetro:</strong>{" "}
-                                  {item.horimetro}
-                                </p>
-                              )}
-                              {item.prioridade && (
-                                <p>
-                                  <strong>Prioridade:</strong>{" "}
-                                  {item.prioridade}
-                                </p>
-                              )}
-                              {item.status && (
-                                <p>
-                                  <strong>Status:</strong>{" "}
-                                  {item.status}
-                                </p>
-                              )}
-                            </div>
-
-                            {item.fotos.length > 0 && (
-                              <div className="fotos-servico-relatorio">
-                                <h4>📷 Fotos do Serviço</h4>
-
-                                <div className="galeria-relatorio">
-                                  {item.fotos.map(
-                                    (foto, fotoIndex) => (
-                                      <div
-                                        className="galeria-item"
-                                        key={`${item.id}-foto-${foto.id ?? fotoIndex}`}
-                                      >
-                                        <img
-                                          src={foto.imagem}
-                                          alt={
-                                            foto.descricao ||
-                                            `Foto ${fotoIndex + 1} do serviço`
-                                          }
-                                        />
-                                        {foto.descricao && (
-                                          <p>{foto.descricao}</p>
-                                        )}
-                                      </div>
-                                    )
-                                  )}
-                                </div>
-                              </div>
+                          <div className="historico-detalhes">
+                            {item.tipo && (
+                              <p>
+                                <strong>Tipo:</strong> {item.tipo}
+                              </p>
+                            )}
+                            {item.mecanico && (
+                              <p>
+                                <strong>Mecânico:</strong> {item.mecanico}
+                              </p>
+                            )}
+                            {item.horimetro && (
+                              <p>
+                                <strong>Horímetro:</strong> {item.horimetro}
+                              </p>
+                            )}
+                            {item.prioridade && (
+                              <p>
+                                <strong>Prioridade:</strong> {item.prioridade}
+                              </p>
+                            )}
+                            {item.status && (
+                              <p>
+                                <strong>Status:</strong> {item.status}
+                              </p>
                             )}
                           </div>
+
+                          {item.fotos.length > 0 && (
+                            <div className="fotos-servico-relatorio">
+                              <h4>📷 Fotos do Serviço</h4>
+                              <div className="galeria-relatorio">
+                                {item.fotos.map((foto, fotoIndex) => (
+                                  <div
+                                    className="galeria-item"
+                                    key={`${item.id}-foto-${foto.id ?? fotoIndex}`}
+                                  >
+                                    <img
+                                      src={foto.imagem}
+                                      alt={
+                                        foto.descricao ||
+                                        `Foto ${fotoIndex + 1} do serviço`
+                                      }
+                                    />
+                                    {foto.descricao && <p>{foto.descricao}</p>}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      )
-                    )}
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <div className="sem-historico">
@@ -653,7 +652,6 @@ export default function Relatorios() {
               {maquinaSelecionada.fotos.length > 0 && (
                 <section className="relatorio-secao">
                   <h3>📸 Galeria de Fotos da Máquina</h3>
-
                   <div className="galeria-relatorio">
                     {maquinaSelecionada.fotos.map((foto, index) => (
                       <div
@@ -699,11 +697,27 @@ export default function Relatorios() {
           color: #94a3b8;
         }
 
+        .btn-atualizar {
+          padding: 10px 16px;
+          border: 1px solid #64748b;
+          border-radius: 8px;
+          background: #162231;
+          color: white;
+          cursor: pointer;
+        }
+
+        .btn-atualizar:disabled {
+          opacity: 0.6;
+          cursor: wait;
+        }
+
         .mensagem-relatorio,
-        .erro-relatorio {
+        .erro-relatorio,
+        .diagnostico-relatorio {
           padding: 15px 18px;
           margin: 16px 0;
           border-radius: 8px;
+          overflow-wrap: anywhere;
         }
 
         .mensagem-relatorio {
@@ -715,7 +729,12 @@ export default function Relatorios() {
           color: #fecaca;
           background: #450a0a;
           border: 1px solid #991b1b;
-          overflow-wrap: anywhere;
+        }
+
+        .diagnostico-relatorio {
+          color: #dbeafe;
+          background: #172554;
+          border: 1px solid #1d4ed8;
         }
 
         .relatorio-maquinas-grid {
