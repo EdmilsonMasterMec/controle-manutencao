@@ -2,28 +2,25 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  carregarMaquinas,
-  FotoServico,
-} from "../../lib/store";
+import { supabase } from "../../lib/supabase";
+
+type FotoRelatorio = {
+  id?: number | string;
+  imagem?: string;
+  descricao?: string;
+  caminho?: string;
+};
 
 type HistoricoRelatorio = {
-  id?: number;
+  id: string;
   data?: string;
   descricao?: string;
-  observacao?: string;
-  observacoes?: string;
-  servico?: string;
-  foto?: string;
-
-  // NOVA ESTRUTURA
-  fotos?: FotoServico[];
-
   tipo?: string;
   mecanico?: string;
   horimetro?: string;
   prioridade?: string;
   status?: string;
+  fotos: FotoRelatorio[];
 };
 
 type MaquinaRelatorio = {
@@ -36,866 +33,617 @@ type MaquinaRelatorio = {
   horimetro?: string;
   status?: string;
   tipo?: string;
-  tipoMaquina?: string;
   proximaManutencao?: string;
   observacoes?: string;
   foto?: string;
-  fotos?: string[];
-  historico?: HistoricoRelatorio[];
+  fotos: string[];
+  historico: HistoricoRelatorio[];
 };
 
-export default function Relatorios() {
-  const [maquinas, setMaquinas] =
-    useState<MaquinaRelatorio[]>([]);
+type EquipamentoBanco = {
+  id: number;
+  nome?: string | null;
+  fabricante?: string | null;
+  modelo?: string | null;
+  ano?: string | number | null;
+  numero_serie?: string | null;
+  numeroSerie?: string | null;
+  horimetro?: string | number | null;
+  status?: string | null;
+  tipo?: string | null;
+  tipo_maquina?: string | null;
+  proxima_manutencao?: string | null;
+  proximaManutencao?: string | null;
+  observacoes?: string | null;
+  foto?: string | null;
+  fotos?: unknown;
+};
 
-  const [
-    maquinaSelecionada,
-    setMaquinaSelecionada,
-  ] = useState<MaquinaRelatorio | null>(null);
+type ServicoBanco = {
+  id?: number | string;
+  descricao?: string;
+  fotos?: unknown;
+};
+
+type ManutencaoBanco = {
+  id: number;
+  equipamento_id?: number | null;
+  maquina?: string | null;
+  tipo?: string | null;
+  mecanico?: string | null;
+  data?: string | null;
+  horimetro?: string | number | null;
+  prioridade?: string | null;
+  status?: string | null;
+  defeito?: string | null;
+  observacao?: string | null;
+  servicos?: unknown;
+};
+
+function texto(valor: unknown): string {
+  if (valor === null || valor === undefined) return "";
+  return String(valor);
+}
+
+function listaFotos(valor: unknown): FotoRelatorio[] {
+  if (!Array.isArray(valor)) return [];
+
+  return valor
+    .map((item, index) => {
+      if (typeof item === "string") {
+        return {
+          id: index,
+          imagem: item,
+          descricao: "",
+        };
+      }
+
+      if (item && typeof item === "object") {
+        const foto = item as Record<string, unknown>;
+
+        return {
+          id:
+            typeof foto.id === "number" || typeof foto.id === "string"
+              ? foto.id
+              : index,
+          imagem:
+            texto(foto.imagem) ||
+            texto(foto.url) ||
+            texto(foto.caminho),
+          descricao: texto(foto.descricao),
+          caminho: texto(foto.caminho),
+        };
+      }
+
+      return null;
+    })
+    .filter((foto): foto is FotoRelatorio => Boolean(foto?.imagem));
+}
+
+function listaFotosMaquina(valor: unknown): string[] {
+  if (!Array.isArray(valor)) return [];
+
+  return valor
+    .map((item) => {
+      if (typeof item === "string") return item;
+
+      if (item && typeof item === "object") {
+        const foto = item as Record<string, unknown>;
+        return (
+          texto(foto.imagem) ||
+          texto(foto.url) ||
+          texto(foto.caminho)
+        );
+      }
+
+      return "";
+    })
+    .filter(Boolean);
+}
+
+function formatarData(data?: string): string {
+  if (!data) return "Não informada";
+
+  // Datas no formato AAAA-MM-DD são formatadas sem deslocamento de fuso.
+  const partes = data.split("-");
+  if (partes.length === 3 && partes[0].length === 4) {
+    return `${partes[2].slice(0, 2)}/${partes[1]}/${partes[0]}`;
+  }
+
+  return data;
+}
+
+function normalizarNome(nome?: string | null): string {
+  return (nome || "").trim().toLocaleLowerCase("pt-BR");
+}
+
+function obterServicos(valor: unknown): ServicoBanco[] {
+  if (!Array.isArray(valor)) return [];
+
+  return valor.filter(
+    (item): item is ServicoBanco =>
+      Boolean(item) && typeof item === "object"
+  );
+}
+
+function obterHistoricoDaMaquina(
+  equipamento: EquipamentoBanco,
+  manutencoes: ManutencaoBanco[]
+): HistoricoRelatorio[] {
+  const nomeEquipamento = normalizarNome(equipamento.nome);
+
+  const manutencoesDaMaquina = manutencoes.filter((manutencao) => {
+    // Se houver equipamento_id, ele é usado para relacionar com segurança.
+    if (manutencao.equipamento_id !== null &&
+        manutencao.equipamento_id !== undefined) {
+      return manutencao.equipamento_id === equipamento.id;
+    }
+
+    // Compatibilidade com registros antigos que guardaram somente o nome.
+    return normalizarNome(manutencao.maquina) === nomeEquipamento;
+  });
+
+  return manutencoesDaMaquina.flatMap((manutencao) => {
+    const servicos = obterServicos(manutencao.servicos);
+
+    // Mesmo se uma manutenção antiga não tiver serviços detalhados,
+    // ela continua aparecendo no relatório.
+    const servicosParaExibir =
+      servicos.length > 0
+        ? servicos
+        : [{ descricao: manutencao.defeito || "Manutenção registrada" }];
+
+    return servicosParaExibir.map((servico, indice) => {
+      const fotos = listaFotos(servico.fotos);
+
+      const descricaoServico =
+        texto(servico.descricao).trim() ||
+        texto(manutencao.defeito).trim() ||
+        texto(manutencao.observacao).trim() ||
+        "Serviço realizado";
+
+      return {
+        id: `${manutencao.id}-${indice}`,
+        data: manutencao.data || "",
+        descricao: descricaoServico,
+        tipo: manutencao.tipo || "",
+        mecanico: manutencao.mecanico || "",
+        horimetro: texto(manutencao.horimetro),
+        prioridade: manutencao.prioridade || "",
+        status: manutencao.status || "",
+        fotos,
+      };
+    });
+  });
+}
+
+export default function Relatorios() {
+  const [maquinas, setMaquinas] = useState<MaquinaRelatorio[]>([]);
+  const [maquinaSelecionada, setMaquinaSelecionada] =
+    useState<MaquinaRelatorio | null>(null);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState("");
 
   useEffect(() => {
-    const dados =
-      carregarMaquinas() as MaquinaRelatorio[];
+    let ativo = true;
 
-    setMaquinas(dados);
+    async function carregarDados() {
+      setCarregando(true);
+      setErro("");
+
+      const [equipamentosResposta, manutencoesResposta] = await Promise.all([
+        supabase.from("equipamentos").select("*").order("id", {
+          ascending: true,
+        }),
+        supabase.from("manutencoes").select("*").order("data", {
+          ascending: false,
+        }),
+      ]);
+
+      if (!ativo) return;
+
+      if (equipamentosResposta.error) {
+        console.error(
+          "Erro ao carregar equipamentos:",
+          equipamentosResposta.error
+        );
+        setErro(
+          `Não foi possível carregar as máquinas: ${equipamentosResposta.error.message}`
+        );
+        setMaquinas([]);
+        setCarregando(false);
+        return;
+      }
+
+      if (manutencoesResposta.error) {
+        console.error(
+          "Erro ao carregar manutenções:",
+          manutencoesResposta.error
+        );
+        setErro(
+          `Não foi possível carregar as manutenções: ${manutencoesResposta.error.message}`
+        );
+        setMaquinas([]);
+        setCarregando(false);
+        return;
+      }
+
+      const equipamentos =
+        (equipamentosResposta.data || []) as EquipamentoBanco[];
+
+      const manutencoes =
+        (manutencoesResposta.data || []) as ManutencaoBanco[];
+
+      const maquinasFormatadas: MaquinaRelatorio[] = equipamentos.map(
+        (equipamento) => ({
+          id: equipamento.id,
+          nome: equipamento.nome || "Máquina sem nome",
+          fabricante: equipamento.fabricante || "",
+          modelo: equipamento.modelo || "",
+          ano: texto(equipamento.ano),
+          numeroSerie:
+            equipamento.numero_serie ||
+            equipamento.numeroSerie ||
+            "",
+          horimetro: texto(equipamento.horimetro),
+          status: equipamento.status || "",
+          tipo:
+            equipamento.tipo ||
+            equipamento.tipo_maquina ||
+            "",
+          proximaManutencao:
+            equipamento.proxima_manutencao ||
+            equipamento.proximaManutencao ||
+            "",
+          observacoes: equipamento.observacoes || "",
+          foto: equipamento.foto || "",
+          fotos: listaFotosMaquina(equipamento.fotos),
+          historico: obterHistoricoDaMaquina(equipamento, manutencoes),
+        })
+      );
+
+      setMaquinas(maquinasFormatadas);
+
+      // Se a máquina selecionada ainda existir, atualiza os dados dela.
+      setMaquinaSelecionada((selecionada) => {
+        if (!selecionada) return null;
+
+        return (
+          maquinasFormatadas.find((maquina) => maquina.id === selecionada.id) ||
+          null
+        );
+      });
+
+      setCarregando(false);
+    }
+
+    carregarDados();
+
+    return () => {
+      ativo = false;
+    };
   }, []);
 
   function imprimirRelatorio() {
     window.print();
   }
 
-  function formatarData(data?: string) {
-    if (!data) {
-      return "Não informada";
-    }
-
-    // Data do input type="date"
-    if (
-      /^\d{4}-\d{2}-\d{2}$/.test(data)
-    ) {
-      const partes = data.split("-");
-
-      return `${partes[2]}/${partes[1]}/${partes[0]}`;
-    }
-
-    return data;
+  function formatarTextoHistorico(item: HistoricoRelatorio) {
+    return item.descricao || "Serviço realizado";
   }
 
-  function formatarTextoHistorico(
-    item: HistoricoRelatorio
-  ) {
-    return (
-      item.descricao ||
-      item.servico ||
-      item.observacao ||
-      item.observacoes ||
-      "Serviço realizado"
-    );
-  }
-
-  function obterFotosDoHistorico(
-    item: HistoricoRelatorio
-  ): FotoServico[] {
-    /*
-     * NOVA ESTRUTURA:
-     * item.fotos
-     */
-    if (
-      Array.isArray(item.fotos) &&
-      item.fotos.length > 0
-    ) {
-      return item.fotos;
-    }
-
-    /*
-     * COMPATIBILIDADE:
-     * Se existir somente a foto antiga,
-     * transforma em uma foto do novo formato.
-     */
-    if (item.foto) {
-      return [
-        {
-          id:
-            item.id ||
-            Date.now(),
-
-          imagem: item.foto,
-
-          descricao: "",
-        },
-      ];
-    }
-
-    return [];
+  function classeStatus(status?: string) {
+    if (status === "Operando") return "status-operando";
+    if (status === "Em Manutenção") return "status-manutencao";
+    return "status-parada";
   }
 
   return (
     <>
-      <main className="robert-app relatorio-page">
+      <main className="mastermec-app relatorio-page">
         <section className="page-container">
-
-          {/* ============================================
-              ÁREA DE SELEÇÃO
-          ============================================ */}
-
           <div className="no-print">
-
-            <Link
-              href="/"
-              className="voltar"
-            >
+            <Link href="/" className="voltar">
               ← Voltar ao Dashboard
             </Link>
 
             <div className="page-header">
-
               <div>
-                <h1>
-                  📊 Relatórios
-                </h1>
-
+                <h1>📊 Relatórios</h1>
                 <p>
-                  Relatórios completos das
-                  máquinas e histórico de
-                  manutenção
+                  Relatórios completos das máquinas e histórico de manutenção
                 </p>
               </div>
-
             </div>
 
             <div className="relatorio-introducao">
-
-              <h2>
-                Selecione uma máquina
-              </h2>
-
+              <h2>Selecione uma máquina</h2>
               <p>
-                Escolha uma máquina abaixo
-                para visualizar e imprimir
-                seu relatório completo.
+                Escolha uma máquina abaixo para visualizar e imprimir seu
+                relatório completo.
               </p>
-
             </div>
 
-            <div className="relatorio-maquinas-grid">
+            {carregando && (
+              <div className="mensagem-relatorio">
+                Carregando máquinas e manutenções...
+              </div>
+            )}
 
-              {maquinas.length > 0 ? (
+            {erro && (
+              <div className="erro-relatorio" role="alert">
+                {erro}
+              </div>
+            )}
 
-                maquinas.map(
-                  (maquina) => (
+            {!carregando && !erro && maquinas.length === 0 && (
+              <div className="sem-maquinas">
+                <h3>Nenhuma máquina cadastrada</h3>
+                <p>
+                  Cadastre máquinas primeiro para gerar relatórios.
+                </p>
+              </div>
+            )}
 
-                    <button
-                      key={maquina.id}
-                      className={
-                        maquinaSelecionada?.id ===
-                        maquina.id
-                          ? "relatorio-maquina-card ativo"
-                          : "relatorio-maquina-card"
-                      }
-                      onClick={() =>
-                        setMaquinaSelecionada(
-                          maquina
-                        )
-                      }
-                    >
+            {!carregando && maquinas.length > 0 && (
+              <div className="relatorio-maquinas-grid">
+                {maquinas.map((maquina) => (
+                  <button
+                    type="button"
+                    key={maquina.id}
+                    className={
+                      maquinaSelecionada?.id === maquina.id
+                        ? "relatorio-maquina-card ativo"
+                        : "relatorio-maquina-card"
+                    }
+                    onClick={() => setMaquinaSelecionada(maquina)}
+                  >
+                    <div className="relatorio-card-icon">🚜</div>
 
-                      <div className="relatorio-card-icon">
-                        🚜
-                      </div>
-
-                      <div>
-
-                        <h3>
-                          {maquina.nome}
-                        </h3>
-
-                        <p>
-                          {maquina.fabricante}{" "}
-                          {maquina.modelo}
-                        </p>
-
-                        <span
-                          className={
-                            maquina.status ===
-                            "Operando"
-                              ? "status-operando"
-                              : maquina.status ===
-                                "Em Manutenção"
-                              ? "status-manutencao"
-                              : "status-parada"
-                          }
-                        >
-                          {maquina.status ||
-                            "Sem status"}
-                        </span>
-
-                      </div>
-
-                    </button>
-
-                  )
-                )
-
-              ) : (
-
-                <div className="sem-maquinas">
-
-                  <h3>
-                    Nenhuma máquina
-                    cadastrada
-                  </h3>
-
-                  <p>
-                    Cadastre máquinas
-                    primeiro para gerar
-                    relatórios.
-                  </p>
-
-                </div>
-
-              )}
-
-            </div>
-
+                    <div className="relatorio-card-texto">
+                      <h3>{maquina.nome}</h3>
+                      <p>
+                        {maquina.fabricante} {maquina.modelo}
+                      </p>
+                      <span className={classeStatus(maquina.status)}>
+                        {maquina.status || "Sem status"}
+                      </span>
+                      <small>
+                        {maquina.historico.length} registro(s) de manutenção
+                      </small>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* ============================================
-              DOCUMENTO DO RELATÓRIO
-          ============================================ */}
-
           {maquinaSelecionada && (
-
             <div className="relatorio-documento">
-
-              {/* CABEÇALHO */}
-
               <div className="relatorio-cabecalho">
-
                 <div>
-
-                  <h1>
-                    Robert Engenharia
-                  </h1>
-
+                  <h1>MasterMec</h1>
                   <p>
-                    Sistema Inteligente de
-                    Gestão e Manutenção de
-                    Máquinas
+                    Sistema Inteligente de Gestão e Manutenção de Máquinas
                   </p>
-
                 </div>
 
                 <div className="relatorio-titulo">
-
-                  <h2>
-                    RELATÓRIO TÉCNICO
-                  </h2>
-
-                  <p>
-                    Emissão:{" "}
-                    {new Date().toLocaleDateString(
-                      "pt-BR"
-                    )}
-                  </p>
-
+                  <h2>RELATÓRIO TÉCNICO</h2>
+                  <p>Emissão: {new Date().toLocaleDateString("pt-BR")}</p>
                 </div>
-
               </div>
 
-              <div className="relatorio-linha"></div>
-
-              {/* ==========================================
-                  IDENTIFICAÇÃO DA MÁQUINA
-              ========================================== */}
+              <div className="relatorio-linha" />
 
               <div className="relatorio-nome-maquina">
-
                 <div>
-
-                  <span>
-                    RELATÓRIO DA MÁQUINA
-                  </span>
-
-                  <h2>
-                    🚜{" "}
-                    {maquinaSelecionada.nome}
-                  </h2>
-
+                  <span>RELATÓRIO DA MÁQUINA</span>
+                  <h2>🚜 {maquinaSelecionada.nome}</h2>
                 </div>
 
                 <div className="relatorio-status">
-
-                  <strong>
-                    Status
-                  </strong>
-
-                  <span
-                    className={
-                      maquinaSelecionada.status ===
-                      "Operando"
-                        ? "status-operando"
-                        : maquinaSelecionada.status ===
-                          "Em Manutenção"
-                        ? "status-manutencao"
-                        : "status-parada"
-                    }
-                  >
-                    {maquinaSelecionada.status ||
-                      "Não informado"}
+                  <strong>Status</strong>
+                  <span className={classeStatus(maquinaSelecionada.status)}>
+                    {maquinaSelecionada.status || "Não informado"}
                   </span>
-
                 </div>
-
               </div>
 
-              {/* BOTÃO */}
-
               <div className="relatorio-acoes no-print">
-
                 <button
+                  type="button"
                   className="btn-imprimir"
-                  onClick={
-                    imprimirRelatorio
-                  }
+                  onClick={imprimirRelatorio}
                 >
                   🖨️ Imprimir / Salvar PDF
                 </button>
-
               </div>
 
-              {/* ==========================================
-                  FOTO PRINCIPAL
-              ========================================== */}
-
               {maquinaSelecionada.foto && (
-
                 <section className="relatorio-secao">
-
-                  <h3>
-                    📷 Foto da Máquina
-                  </h3>
-
+                  <h3>📷 Foto da Máquina</h3>
                   <div className="foto-principal-container">
-
                     <img
-                      src={
-                        maquinaSelecionada.foto
-                      }
-                      alt={
-                        maquinaSelecionada.nome
-                      }
+                      src={maquinaSelecionada.foto}
+                      alt={`Foto de ${maquinaSelecionada.nome}`}
                       className="foto-principal-relatorio"
                     />
-
                   </div>
-
                 </section>
-
               )}
 
-              {/* ==========================================
-                  DADOS TÉCNICOS
-              ========================================== */}
-
               <section className="relatorio-secao">
-
-                <h3>
-                  📋 Dados Técnicos da Máquina
-                </h3>
+                <h3>📋 Dados Técnicos da Máquina</h3>
 
                 <div className="dados-maquina-grid">
-
                   <div className="dado-item">
-
-                    <span>
-                      Nome da Máquina
-                    </span>
-
-                    <strong>
-                      {maquinaSelecionada.nome ||
-                        "-"}
-                    </strong>
-
+                    <span>Nome da Máquina</span>
+                    <strong>{maquinaSelecionada.nome || "-"}</strong>
                   </div>
 
                   <div className="dado-item">
-
-                    <span>
-                      Fabricante
-                    </span>
-
-                    <strong>
-                      {maquinaSelecionada.fabricante ||
-                        "-"}
-                    </strong>
-
+                    <span>Fabricante</span>
+                    <strong>{maquinaSelecionada.fabricante || "-"}</strong>
                   </div>
 
                   <div className="dado-item">
-
-                    <span>
-                      Modelo
-                    </span>
-
-                    <strong>
-                      {maquinaSelecionada.modelo ||
-                        "-"}
-                    </strong>
-
+                    <span>Modelo</span>
+                    <strong>{maquinaSelecionada.modelo || "-"}</strong>
                   </div>
 
                   <div className="dado-item">
-
-                    <span>
-                      Ano
-                    </span>
-
-                    <strong>
-                      {maquinaSelecionada.ano ||
-                        "-"}
-                    </strong>
-
+                    <span>Ano</span>
+                    <strong>{maquinaSelecionada.ano || "-"}</strong>
                   </div>
 
                   <div className="dado-item">
-
-                    <span>
-                      Número de Série
-                    </span>
-
-                    <strong>
-                      {maquinaSelecionada.numeroSerie ||
-                        "-"}
-                    </strong>
-
+                    <span>Número de Série</span>
+                    <strong>{maquinaSelecionada.numeroSerie || "-"}</strong>
                   </div>
 
                   <div className="dado-item">
-
-                    <span>
-                      Horímetro
-                    </span>
-
-                    <strong>
-                      {maquinaSelecionada.horimetro ||
-                        "-"}
-                    </strong>
-
+                    <span>Horímetro</span>
+                    <strong>{maquinaSelecionada.horimetro || "-"}</strong>
                   </div>
 
                   <div className="dado-item">
-
-                    <span>
-                      Tipo de Máquina
-                    </span>
-
-                    <strong>
-                      {maquinaSelecionada.tipo ||
-                        maquinaSelecionada.tipoMaquina ||
-                        "-"}
-                    </strong>
-
+                    <span>Tipo de Máquina</span>
+                    <strong>{maquinaSelecionada.tipo || "-"}</strong>
                   </div>
 
                   <div className="dado-item">
-
-                    <span>
-                      Próxima Manutenção
-                    </span>
-
+                    <span>Próxima Manutenção</span>
                     <strong>
-                      {maquinaSelecionada.proximaManutencao ||
-                        "-"}
+                      {maquinaSelecionada.proximaManutencao || "-"}
                     </strong>
-
                   </div>
-
                 </div>
-
               </section>
 
-              {/* ==========================================
-                  OBSERVAÇÕES
-              ========================================== */}
-
               {maquinaSelecionada.observacoes && (
-
                 <section className="relatorio-secao">
-
-                  <h3>
-                    📝 Observações Gerais
-                  </h3>
-
+                  <h3>📝 Observações Gerais</h3>
                   <div className="observacoes-relatorio">
                     {maquinaSelecionada.observacoes}
                   </div>
-
                 </section>
-
               )}
-
-              {/* ==========================================
-                  HISTÓRICO DE MANUTENÇÃO
-              ========================================== */}
 
               <section className="relatorio-secao">
+                <h3>🔧 Histórico de Manutenção</h3>
 
-                <h3>
-                  🔧 Histórico de Manutenção
-                </h3>
-
-                {maquinaSelecionada.historico &&
-                maquinaSelecionada.historico.length >
-                  0 ? (
-
+                {maquinaSelecionada.historico.length > 0 ? (
                   <div className="historico-lista">
-
-                    {maquinaSelecionada.historico.map(
-                      (
-                        item,
-                        index
-                      ) => {
-
-                        const fotos =
-                          obterFotosDoHistorico(
-                            item
-                          );
-
-                        return (
-
-                          <div
-                            className="historico-item"
-                            key={
-                              item.id ||
-                              index
-                            }
-                          >
-
-                            <div className="historico-numero">
-                              {index + 1}
-                            </div>
-
-                            <div className="historico-conteudo">
-
-                              {/* DATA */}
-
-                              <div className="historico-data">
-
-                                <strong>
-                                  Data:
-                                </strong>{" "}
-
-                                {formatarData(
-                                  item.data
-                                )}
-
-                              </div>
-
-                              {/* TIPO */}
-
-                              {item.tipo && (
-
-                                <div className="historico-informacao">
-
-                                  <strong>
-                                    Tipo:
-                                  </strong>{" "}
-
-                                  {item.tipo}
-
-                                </div>
-
-                              )}
-
-                              {/* MECÂNICO */}
-
-                              {item.mecanico && (
-
-                                <div className="historico-informacao">
-
-                                  <strong>
-                                    Mecânico:
-                                  </strong>{" "}
-
-                                  {item.mecanico}
-
-                                </div>
-
-                              )}
-
-                              {/* HORÍMETRO */}
-
-                              {item.horimetro && (
-
-                                <div className="historico-informacao">
-
-                                  <strong>
-                                    Horímetro:
-                                  </strong>{" "}
-
-                                  {item.horimetro}
-
-                                </div>
-
-                              )}
-
-                              {/* PRIORIDADE */}
-
-                              {item.prioridade && (
-
-                                <div className="historico-informacao">
-
-                                  <strong>
-                                    Prioridade:
-                                  </strong>{" "}
-
-                                  {item.prioridade}
-
-                                </div>
-
-                              )}
-
-                              {/* STATUS */}
-
-                              {item.status && (
-
-                                <div className="historico-informacao">
-
-                                  <strong>
-                                    Status:
-                                  </strong>{" "}
-
-                                  {item.status}
-
-                                </div>
-
-                              )}
-
-                              {/* =================================
-                                  DESCRIÇÃO DO SERVIÇO
-                              ================================= */}
-
-                              <div className="servico-relatorio-titulo">
-
-                                <strong>
-                                  🔧 Serviço Executado
-                                </strong>
-
-                              </div>
-
-                              <div className="historico-descricao">
-
-                                {formatarTextoHistorico(
-                                  item
-                                )}
-
-                              </div>
-
-                              {/* =================================
-                                  FOTOS DO SERVIÇO
-                              ================================= */}
-
-                              {fotos.length >
-                                0 && (
-
-                                <div className="fotos-historico-relatorio">
-
-                                  <div className="fotos-historico-titulo">
-
-                                    📷 Fotos do Serviço
-
-                                  </div>
-
-                                  <div className="fotos-historico-grid">
-
-                                    {fotos.map(
-                                      (
-                                        foto,
-                                        fotoIndex
-                                      ) => (
-
-                                        <div
-                                          className="foto-servico-relatorio"
-                                          key={
-                                            foto.id ||
-                                            fotoIndex
-                                          }
-                                        >
-
-                                          <img
-                                            src={
-                                              foto.imagem
-                                            }
-                                            alt={`Foto ${
-                                              fotoIndex +
-                                              1
-                                            } do serviço`}
-                                          />
-
-                                          {/* DESCRIÇÃO DA FOTO */}
-
-                                          {foto.descricao && (
-
-                                            <div className="descricao-foto-relatorio">
-
-                                              <strong>
-                                                Observação da foto:
-                                              </strong>
-
-                                              <p>
-                                                {
-                                                  foto.descricao
-                                                }
-                                              </p>
-
-                                            </div>
-
-                                          )}
-
-                                        </div>
-
-                                      )
-                                    )}
-
-                                  </div>
-
-                                </div>
-
-                              )}
-
-                              {/* OBSERVAÇÃO GERAL */}
-
-                              {item.observacao && (
-
-                                <div className="observacao-servico-relatorio">
-
-                                  <strong>
-                                    Observação:
-                                  </strong>
-
-                                  <p>
-                                    {
-                                      item.observacao
-                                    }
-                                  </p>
-
-                                </div>
-
-                              )}
-
-                            </div>
-
+                    {maquinaSelecionada.historico.map((item, index) => (
+                      <div className="historico-item" key={item.id}>
+                        <div className="historico-numero">{index + 1}</div>
+
+                        <div className="historico-conteudo">
+                          <div className="historico-data">
+                            <strong>Data:</strong> {formatarData(item.data)}
                           </div>
 
-                        );
-                      }
-                    )}
+                          <div className="historico-descricao">
+                            {formatarTextoHistorico(item)}
+                          </div>
 
+                          <div className="historico-detalhes">
+                            {item.tipo && (
+                              <p>
+                                <strong>Tipo:</strong> {item.tipo}
+                              </p>
+                            )}
+                            {item.mecanico && (
+                              <p>
+                                <strong>Mecânico:</strong> {item.mecanico}
+                              </p>
+                            )}
+                            {item.horimetro && (
+                              <p>
+                                <strong>Horímetro:</strong> {item.horimetro}
+                              </p>
+                            )}
+                            {item.prioridade && (
+                              <p>
+                                <strong>Prioridade:</strong> {item.prioridade}
+                              </p>
+                            )}
+                            {item.status && (
+                              <p>
+                                <strong>Status:</strong> {item.status}
+                              </p>
+                            )}
+                          </div>
+
+                          {item.fotos.length > 0 && (
+                            <div className="fotos-servico-relatorio">
+                              <h4>📷 Fotos do Serviço</h4>
+
+                              <div className="galeria-relatorio">
+                                {item.fotos.map((foto, fotoIndex) => (
+                                  <div
+                                    className="galeria-item"
+                                    key={`${item.id}-foto-${foto.id ?? fotoIndex}`}
+                                  >
+                                    <img
+                                      src={foto.imagem}
+                                      alt={
+                                        foto.descricao ||
+                                        `Foto ${fotoIndex + 1} do serviço`
+                                      }
+                                    />
+                                    {foto.descricao && (
+                                      <p>{foto.descricao}</p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-
                 ) : (
-
                   <div className="sem-historico">
-
-                    Nenhum histórico de
-                    manutenção registrado
-                    para esta máquina.
-
+                    Nenhuma manutenção registrada para esta máquina.
                   </div>
-
                 )}
-
               </section>
 
-              {/* ==========================================
-                  GALERIA ANTIGA
-                  Mantida para compatibilidade
-              ========================================== */}
-
-              {maquinaSelecionada.fotos &&
-              maquinaSelecionada.fotos.length >
-                0 && (
-
+              {maquinaSelecionada.fotos.length > 0 && (
                 <section className="relatorio-secao">
-
-                  <h3>
-                    📸 Galeria de Fotos
-                  </h3>
+                  <h3>📸 Galeria de Fotos da Máquina</h3>
 
                   <div className="galeria-relatorio">
-
-                    {maquinaSelecionada.fotos.map(
-                      (
-                        foto,
-                        index
-                      ) => (
-
-                        <div
-                          className="galeria-item"
-                          key={index}
-                        >
-
-                          <img
-                            src={foto}
-                            alt={`Foto ${
-                              index + 1
-                            }`}
-                          />
-
-                        </div>
-
-                      )
-                    )}
-
+                    {maquinaSelecionada.fotos.map((foto, index) => (
+                      <div className="galeria-item" key={`${foto}-${index}`}>
+                        <img
+                          src={foto}
+                          alt={`Foto ${index + 1} da máquina`}
+                        />
+                      </div>
+                    ))}
                   </div>
-
                 </section>
-
               )}
 
-              {/* ==========================================
-                  RODAPÉ
-              ========================================== */}
-
               <div className="relatorio-rodape">
-
                 <div>
-
-                  <strong>
-                    Robert Engenharia
-                  </strong>
-
-                  <p>
-                    Gestão Inteligente de
-                    Máquinas e Manutenção
-                  </p>
-
+                  <strong>MasterMec</strong>
+                  <p>Gestão Inteligente de Máquinas e Manutenção</p>
                 </div>
-
                 <div>
-
-                  <p>
-                    Relatório gerado pelo
-                    sistema Robert Engenharia
-                  </p>
-
+                  <p>Relatório gerado pelo sistema MasterMec</p>
                 </div>
-
               </div>
-
             </div>
-
           )}
-
         </section>
       </main>
 
-      {/* ====================================================
-          CSS
-      ==================================================== */}
-
       <style jsx global>{`
-
         .relatorio-introducao {
           margin-top: 25px;
           margin-bottom: 25px;
@@ -910,18 +658,35 @@ export default function Relatorios() {
           color: #94a3b8;
         }
 
+        .mensagem-relatorio,
+        .erro-relatorio {
+          padding: 15px 18px;
+          margin: 16px 0;
+          border-radius: 8px;
+        }
+
+        .mensagem-relatorio {
+          color: #cbd5e1;
+          background: #162231;
+        }
+
+        .erro-relatorio {
+          color: #fecaca;
+          background: #450a0a;
+          border: 1px solid #991b1b;
+          overflow-wrap: anywhere;
+        }
+
         .relatorio-maquinas-grid {
           display: grid;
-          grid-template-columns: repeat(
-            auto-fit,
-            minmax(280px, 1fr)
-          );
+          grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
           gap: 18px;
           margin-bottom: 30px;
         }
 
         .relatorio-maquina-card {
           width: 100%;
+          min-width: 0;
           display: flex;
           align-items: center;
           gap: 16px;
@@ -931,23 +696,16 @@ export default function Relatorios() {
           border: 1px solid #334155;
           background: #162231;
           cursor: pointer;
-          transition: 0.2s;
           color: white;
-        }
-
-        .relatorio-maquina-card:hover {
-          transform: translateY(-3px);
-          border-color: #f59e0b;
-          background: #1c2a3a;
         }
 
         .relatorio-maquina-card.ativo {
           border-color: #f59e0b;
-          box-shadow:
-            0 0 0 1px #f59e0b;
+          box-shadow: 0 0 0 1px #f59e0b;
         }
 
         .relatorio-card-icon {
+          flex: 0 0 55px;
           width: 55px;
           height: 55px;
           display: flex;
@@ -956,18 +714,28 @@ export default function Relatorios() {
           font-size: 28px;
           background: #263445;
           border-radius: 12px;
-          flex-shrink: 0;
+        }
+
+        .relatorio-card-texto {
+          min-width: 0;
+          overflow-wrap: anywhere;
         }
 
         .relatorio-maquina-card h3 {
-          margin: 0 0 6px 0;
+          margin: 0 0 6px;
           font-size: 17px;
         }
 
         .relatorio-maquina-card p {
-          margin: 0 0 10px 0;
+          margin: 0 0 10px;
           color: #aab5c2;
           font-size: 14px;
+        }
+
+        .relatorio-card-texto small {
+          display: block;
+          margin-top: 9px;
+          color: #cbd5e1;
         }
 
         .relatorio-documento {
@@ -977,9 +745,8 @@ export default function Relatorios() {
           border-radius: 12px;
           margin-top: 30px;
           margin-bottom: 40px;
-          box-shadow:
-            0 10px 30px
-            rgba(0, 0, 0, 0.25);
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+          min-width: 0;
         }
 
         .relatorio-cabecalho {
@@ -992,7 +759,7 @@ export default function Relatorios() {
         .relatorio-cabecalho h1 {
           color: #b45309;
           font-size: 32px;
-          margin: 0 0 8px 0;
+          margin: 0 0 8px;
         }
 
         .relatorio-cabecalho p {
@@ -1007,7 +774,7 @@ export default function Relatorios() {
 
         .relatorio-titulo h2 {
           color: #111827;
-          margin: 0 0 8px 0;
+          margin: 0 0 8px;
           font-size: 20px;
         }
 
@@ -1026,6 +793,7 @@ export default function Relatorios() {
           display: flex;
           justify-content: space-between;
           align-items: center;
+          gap: 18px;
           padding: 20px;
           background: #f3f4f6;
           border-left: 5px solid #d97706;
@@ -1039,8 +807,9 @@ export default function Relatorios() {
         }
 
         .relatorio-nome-maquina h2 {
-          margin: 6px 0 0 0;
+          margin: 6px 0 0;
           color: #111827;
+          overflow-wrap: anywhere;
         }
 
         .relatorio-status {
@@ -1069,10 +838,6 @@ export default function Relatorios() {
           font-weight: bold;
           cursor: pointer;
           font-size: 15px;
-        }
-
-        .btn-imprimir:hover {
-          background: #b45309;
         }
 
         .relatorio-secao {
@@ -1104,18 +869,17 @@ export default function Relatorios() {
 
         .dados-maquina-grid {
           display: grid;
-          grid-template-columns: repeat(
-            2,
-            1fr
-          );
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 15px;
         }
 
         .dado-item {
+          min-width: 0;
           background: #f8fafc;
           border: 1px solid #d1d5db;
           border-radius: 6px;
           padding: 14px;
+          overflow-wrap: anywhere;
         }
 
         .dado-item span {
@@ -1146,20 +910,21 @@ export default function Relatorios() {
         .historico-lista {
           display: flex;
           flex-direction: column;
-          gap: 25px;
+          gap: 20px;
         }
 
         .historico-item {
           display: flex;
           gap: 15px;
           border: 1px solid #d1d5db;
-          padding: 20px;
+          padding: 18px;
           border-radius: 8px;
-          page-break-inside: avoid;
+          min-width: 0;
         }
 
         .historico-numero {
-          min-width: 38px;
+          flex: 0 0 38px;
+          width: 38px;
           height: 38px;
           border-radius: 50%;
           display: flex;
@@ -1168,36 +933,19 @@ export default function Relatorios() {
           background: #d97706;
           color: #ffffff;
           font-weight: bold;
-          flex-shrink: 0;
         }
 
         .historico-conteudo {
           flex: 1;
           min-width: 0;
+          overflow-wrap: anywhere;
         }
 
         .historico-data {
           color: #111827;
-          margin-bottom: 8px;
+          margin-bottom: 10px;
           font-size: 14px;
           font-weight: 600;
-        }
-
-        .historico-informacao {
-          color: #374151;
-          margin-bottom: 5px;
-          font-size: 14px;
-        }
-
-        .historico-informacao strong {
-          color: #111827;
-        }
-
-        .servico-relatorio-titulo {
-          margin-top: 15px;
-          margin-bottom: 8px;
-          color: #92400e;
-          font-size: 16px;
         }
 
         .historico-descricao {
@@ -1206,110 +954,54 @@ export default function Relatorios() {
           font-size: 15px;
           white-space: pre-wrap;
           font-weight: 500;
-          background: #f8fafc;
-          border-left: 3px solid #d97706;
-          padding: 12px;
-          border-radius: 5px;
         }
 
-        /* ================================================
-           FOTOS DOS SERVIÇOS
-        ================================================= */
-
-        .fotos-historico-relatorio {
-          margin-top: 22px;
-        }
-
-        .fotos-historico-titulo {
-          font-size: 16px;
-          font-weight: bold;
-          color: #111827;
-          margin-bottom: 15px;
-          padding-bottom: 8px;
-          border-bottom: 1px solid #d1d5db;
-        }
-
-        .fotos-historico-grid {
-          display: grid;
-          grid-template-columns: repeat(
-            2,
-            minmax(0, 1fr)
-          );
-          gap: 18px;
-        }
-
-        .foto-servico-relatorio {
-          border: 1px solid #cbd5e1;
-          border-radius: 8px;
-          overflow: hidden;
-          background: #f8fafc;
-          page-break-inside: avoid;
-        }
-
-        .foto-servico-relatorio img {
-          width: 100%;
-          max-height: 430px;
-          object-fit: contain;
-          display: block;
-          background: #ffffff;
-        }
-
-        .descricao-foto-relatorio {
-          padding: 12px;
-          border-top: 1px solid #d1d5db;
-          background: #f8fafc;
-        }
-
-        .descricao-foto-relatorio strong {
-          display: block;
-          color: #111827;
-          font-size: 13px;
-          margin-bottom: 5px;
-        }
-
-        .descricao-foto-relatorio p {
-          margin: 0;
+        .historico-detalhes {
+          margin-top: 12px;
           color: #374151;
           font-size: 14px;
-          line-height: 1.5;
-          white-space: pre-wrap;
         }
 
-        .observacao-servico-relatorio {
+        .historico-detalhes p {
+          margin: 5px 0;
+        }
+
+        .fotos-servico-relatorio {
           margin-top: 18px;
-          padding: 14px;
-          background: #fffbeb;
-          border-left: 4px solid #d97706;
-          color: #374151;
         }
 
-        .observacao-servico-relatorio p {
-          margin: 6px 0 0;
-          white-space: pre-wrap;
-          line-height: 1.5;
+        .fotos-servico-relatorio h4 {
+          color: #111827;
+          margin: 0 0 12px;
         }
 
         .galeria-relatorio {
           display: grid;
-          grid-template-columns: repeat(
-            auto-fit,
-            minmax(250px, 1fr)
-          );
+          grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
           gap: 15px;
         }
 
         .galeria-item {
+          min-width: 0;
           border: 1px solid #d1d5db;
           padding: 5px;
           border-radius: 6px;
-          page-break-inside: avoid;
+          break-inside: avoid;
         }
 
         .galeria-item img {
+          display: block;
           width: 100%;
-          height: 250px;
-          object-fit: cover;
+          max-height: 350px;
+          object-fit: contain;
           border-radius: 4px;
+        }
+
+        .galeria-item p {
+          margin: 8px 4px 4px;
+          color: #374151;
+          font-size: 13px;
+          overflow-wrap: anywhere;
         }
 
         .sem-historico {
@@ -1334,6 +1026,7 @@ export default function Relatorios() {
           padding-top: 20px;
           display: flex;
           justify-content: space-between;
+          gap: 20px;
           color: #374151;
           font-size: 12px;
         }
@@ -1342,12 +1035,32 @@ export default function Relatorios() {
           color: #111827;
         }
 
-        /* ================================================
-           RESPONSIVO
-        ================================================= */
+        .status-operando,
+        .status-manutencao,
+        .status-parada {
+          display: inline-block;
+          padding: 4px 9px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .status-operando {
+          color: #065f46;
+          background: #d1fae5;
+        }
+
+        .status-manutencao {
+          color: #92400e;
+          background: #fef3c7;
+        }
+
+        .status-parada {
+          color: #991b1b;
+          background: #fee2e2;
+        }
 
         @media (max-width: 700px) {
-
           .relatorio-documento {
             padding: 20px;
           }
@@ -1356,6 +1069,7 @@ export default function Relatorios() {
           .relatorio-nome-maquina,
           .relatorio-rodape {
             flex-direction: column;
+            align-items: flex-start;
           }
 
           .relatorio-titulo {
@@ -1369,19 +1083,9 @@ export default function Relatorios() {
           .dados-maquina-grid {
             grid-template-columns: 1fr;
           }
-
-          .fotos-historico-grid {
-            grid-template-columns: 1fr;
-          }
-
         }
 
-        /* ================================================
-           IMPRESSÃO / PDF
-        ================================================= */
-
         @media print {
-
           * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
@@ -1393,13 +1097,13 @@ export default function Relatorios() {
           }
 
           .no-print,
-          .robert-app > .sidebar,
+          .mastermec-app > .sidebar,
           nav,
           button {
             display: none !important;
           }
 
-          .robert-app {
+          .mastermec-app {
             background: white !important;
             padding: 0 !important;
             margin: 0 !important;
@@ -1418,12 +1122,10 @@ export default function Relatorios() {
             color: #000000 !important;
             box-shadow: none !important;
             border-radius: 0 !important;
-            padding: 20px !important;
+            padding: 10px !important;
             margin: 0 !important;
             width: 100% !important;
           }
-
-          /* FORÇA TEXTO ESCURO */
 
           .relatorio-documento,
           .relatorio-documento p,
@@ -1432,16 +1134,13 @@ export default function Relatorios() {
           .relatorio-documento strong,
           .relatorio-documento h1,
           .relatorio-documento h2,
-          .relatorio-documento h3 {
+          .relatorio-documento h3,
+          .relatorio-documento h4 {
             color: #111111 !important;
           }
 
           .relatorio-cabecalho h1 {
             color: #9a4d00 !important;
-          }
-
-          .relatorio-titulo h2 {
-            color: #000000 !important;
           }
 
           .relatorio-linha {
@@ -1453,32 +1152,14 @@ export default function Relatorios() {
             border-left-color: #b45309 !important;
           }
 
-          .relatorio-secao h3 {
-            color: #000000 !important;
-            border-bottom-color: #777777 !important;
-          }
-
           .dado-item {
             background: #f5f5f5 !important;
             border-color: #999999 !important;
           }
 
-          .dado-item span {
-            color: #333333 !important;
-          }
-
-          .dado-item strong {
-            color: #000000 !important;
-          }
-
           .observacoes-relatorio {
             background: #f8f8f8 !important;
             border-left-color: #b45309 !important;
-            color: #000000 !important;
-          }
-
-          .historico-item {
-            border-color: #888888 !important;
           }
 
           .historico-numero {
@@ -1486,104 +1167,26 @@ export default function Relatorios() {
             color: #ffffff !important;
           }
 
-          .historico-data,
-          .historico-data strong,
-          .historico-informacao,
-          .historico-informacao strong,
-          .historico-descricao,
-          .servico-relatorio-titulo {
-            color: #000000 !important;
-          }
-
-          .historico-descricao {
-            background: #f5f5f5 !important;
-          }
-
-          .fotos-historico-titulo {
-            color: #000000 !important;
-            border-bottom-color: #888888 !important;
-          }
-
-          .foto-servico-relatorio {
-            border-color: #888888 !important;
-            background: #ffffff !important;
-          }
-
-          .foto-servico-relatorio img {
-            background: #ffffff !important;
-          }
-
-          .descricao-foto-relatorio {
-            background: #f5f5f5 !important;
-            border-top-color: #888888 !important;
-          }
-
-          .descricao-foto-relatorio strong,
-          .descricao-foto-relatorio p {
-            color: #000000 !important;
-          }
-
-          .observacao-servico-relatorio {
-            background: #f8f8f8 !important;
-            border-left-color: #b45309 !important;
-          }
-
-          .observacao-servico-relatorio,
-          .observacao-servico-relatorio strong,
-          .observacao-servico-relatorio p {
-            color: #000000 !important;
-          }
-
           .sem-historico {
             background: #eeeeee !important;
-            color: #000000 !important;
-          }
-
-          .relatorio-rodape,
-          .relatorio-rodape p,
-          .relatorio-rodape strong {
-            color: #222222 !important;
-          }
-
-          .status-operando {
-            color: #064e3b !important;
-            border: 1px solid #064e3b !important;
-          }
-
-          .status-manutencao {
-            color: #78350f !important;
-            border: 1px solid #78350f !important;
-          }
-
-          .status-parada {
-            color: #7f1d1d !important;
-            border: 1px solid #7f1d1d !important;
           }
 
           img {
             max-width: 100% !important;
-            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
 
-          .relatorio-secao {
-            page-break-inside: avoid;
-          }
-
-          .historico-item {
-            page-break-inside: avoid;
-          }
-
-          .foto-servico-relatorio {
-            page-break-inside: avoid;
+          .relatorio-secao,
+          .historico-item,
+          .galeria-item {
+            break-inside: avoid;
           }
 
           @page {
             size: A4;
             margin: 15mm;
           }
-
         }
-
       `}</style>
     </>
   );
