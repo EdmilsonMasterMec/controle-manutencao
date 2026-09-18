@@ -1,961 +1,788 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-type FotoRelatorio = {
+type Foto = {
   id?: number | string;
   imagem?: string;
-  url?: string;
-  caminho?: string;
   descricao?: string;
 };
 
-type ServicoRelatorio = {
+type Servico = {
   id?: number | string;
   descricao?: string;
-  fotos?: unknown;
+  fotos?: Foto[];
 };
 
-type HistoricoRelatorio = {
-  id?: number | string;
-  maquina?: string | null;
-  data?: string;
-  descricao?: string;
-  defeito?: string;
-  observacao?: string;
+type Manutencao = {
+  id: number;
+  equipamento_id?: number | null;
+  maquina?: string;
   tipo?: string;
   mecanico?: string;
-  horimetro?: string | number;
+  data?: string;
+  horimetro?: string;
   prioridade?: string;
   status?: string;
-  servicos?: unknown;
-  fotos?: unknown;
+  servicos?: Servico[];
 };
 
-type EquipamentoRelatorio = {
+type Equipamento = {
   id: number;
-  nome?: string | null;
-  fabricante?: string | null;
-  modelo?: string | null;
-  ano?: string | number | null;
-  numero_serie?: string | null;
-  numeroSerie?: string | null;
-  horimetro?: string | number | null;
-  status?: string | null;
-  tipo?: string | null;
-  tipo_maquina?: string | null;
-  proxima_manutencao?: string | null;
-  proximaManutencao?: string | null;
-  observacoes?: string | null;
-  foto?: string | null;
-  fotos?: unknown;
-  historico?: unknown;
+  nome: string;
+  modelo?: string;
+  fabricante?: string;
+  ano?: string;
+  horimetro?: string;
+  responsavel?: string;
+  localizacao?: string;
+  status?: string;
+  proxima_manutencao?: string;
 };
-
-function texto(valor: unknown): string {
-  if (valor === null || valor === undefined) return "";
-  return String(valor);
-}
-
-function normalizarNome(valor: unknown): string {
-  return texto(valor)
-    .trim()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ")
-    .toLowerCase();
-}
-
-function arraySeguro(valor: unknown): unknown[] {
-  if (Array.isArray(valor)) return valor;
-
-  if (typeof valor === "string") {
-    try {
-      const convertido = JSON.parse(valor);
-      return Array.isArray(convertido) ? convertido : [];
-    } catch {
-      return [];
-    }
-  }
-
-  return [];
-}
-
-function formatarData(data?: string): string {
-  if (!data) return "Não informada";
-
-  const partes = data.split("-");
-
-  if (partes.length === 3 && partes[0].length === 4) {
-    return `${partes[2].slice(0, 2)}/${partes[1]}/${partes[0]}`;
-  }
-
-  return data;
-}
-
-function obterFotos(valor: unknown): FotoRelatorio[] {
-  return arraySeguro(valor)
-    .map((item, index) => {
-      if (typeof item === "string") {
-        return {
-          id: index,
-          imagem: item,
-        };
-      }
-
-      if (!item || typeof item !== "object") return null;
-
-      const foto = item as Record<string, unknown>;
-
-      return {
-        id:
-          typeof foto.id === "number" || typeof foto.id === "string"
-            ? foto.id
-            : index,
-        imagem:
-          texto(foto.imagem) ||
-          texto(foto.url) ||
-          texto(foto.caminho),
-        descricao: texto(foto.descricao),
-        caminho: texto(foto.caminho),
-      };
-    })
-    .filter((foto): foto is FotoRelatorio => Boolean(foto?.imagem));
-}
-
-function obterHistorico(valor: unknown): HistoricoRelatorio[] {
-  return arraySeguro(valor).filter(
-    (item): item is HistoricoRelatorio =>
-      Boolean(item) && typeof item === "object"
-  );
-}
-
-function obterServicos(valor: unknown): ServicoRelatorio[] {
-  return arraySeguro(valor).filter(
-    (item): item is ServicoRelatorio =>
-      Boolean(item) && typeof item === "object"
-  );
-}
 
 export default function RelatoriosPage() {
   const searchParams = useSearchParams();
-  const idParam = searchParams.get("id");
 
-  const [maquinas, setMaquinas] = useState<EquipamentoRelatorio[]>([]);
-  const [manutencoesBanco, setManutencoesBanco] =
-    useState<HistoricoRelatorio[]>([]);
-  const [selecionada, setSelecionada] =
-    useState<EquipamentoRelatorio | null>(null);
-  const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState("");
+  const [equipamentos, setEquipamentos] =
+    useState<Equipamento[]>([]);
 
-  useEffect(() => {
-    let ativo = true;
+  const [manutencoes, setManutencoes] =
+    useState<Manutencao[]>([]);
 
-    async function carregar() {
-      setCarregando(true);
-      setErro("");
+  const [equipamentoSelecionado, setEquipamentoSelecionado] =
+    useState<Equipamento | null>(null);
 
-      const [resEquipamentos, resManutencoes] = await Promise.all([
-        supabase
-          .from("equipamentos")
-          .select("*")
-          .order("id", { ascending: true }),
+  const [carregando, setCarregando] =
+    useState(true);
 
-        supabase
-          .from("manutencoes")
-          .select("*")
-          .order("id", { ascending: false }),
-      ]);
+  const [erro, setErro] =
+    useState("");
 
-      if (!ativo) return;
+  async function carregarDados() {
+    setCarregando(true);
+    setErro("");
 
-      if (resEquipamentos.error) {
-        console.error(
-          "Erro ao carregar equipamentos:",
-          resEquipamentos.error
-        );
+    const [
+      equipamentosResponse,
+      manutencoesResponse,
+    ] = await Promise.all([
+      supabase
+        .from("equipamentos")
+        .select("*")
+        .order("id", {
+          ascending: true,
+        }),
 
-        setErro(
-          "Erro ao carregar máquinas: " + resEquipamentos.error.message
-        );
-        setMaquinas([]);
-        setManutencoesBanco([]);
-        setSelecionada(null);
-        setCarregando(false);
-        return;
-      }
+      supabase
+        .from("manutencoes")
+        .select("*")
+        .order("id", {
+          ascending: false,
+        }),
+    ]);
 
-      const lista = (resEquipamentos.data ||
-        []) as EquipamentoRelatorio[];
+    if (equipamentosResponse.error) {
+      console.error(
+        equipamentosResponse.error
+      );
 
-      setMaquinas(lista);
-
-      if (resManutencoes.error) {
-        console.error(
-          "Erro ao carregar manutenções:",
-          resManutencoes.error
-        );
-
-        setManutencoesBanco([]);
-        setErro(
-          "As máquinas foram carregadas, mas não foi possível buscar as manutenções: " +
-            resManutencoes.error.message
-        );
-      } else {
-        setManutencoesBanco(
-          (resManutencoes.data || []) as HistoricoRelatorio[]
-        );
-      }
-
-      if (idParam) {
-        const encontrada = lista.find(
-          (maquina) => String(maquina.id) === String(idParam)
-        );
-
-        if (encontrada) {
-          setSelecionada(encontrada);
-        } else {
-          setSelecionada(null);
-          setErro("Não encontrei uma máquina com esse ID.");
-        }
-      } else {
-        setSelecionada(null);
-      }
+      setErro(
+        "Erro ao carregar equipamentos: " +
+          equipamentosResponse.error.message
+      );
 
       setCarregando(false);
+      return;
     }
 
-    carregar();
+    if (manutencoesResponse.error) {
+      console.error(
+        manutencoesResponse.error
+      );
 
-    return () => {
-      ativo = false;
-    };
-  }, [idParam]);
+      setErro(
+        "Erro ao carregar manutenções: " +
+          manutencoesResponse.error.message
+      );
 
-  function imprimir() {
-    window.print();
+      setCarregando(false);
+      return;
+    }
+
+    const listaEquipamentos =
+      equipamentosResponse.data || [];
+
+    const listaManutencoes =
+      manutencoesResponse.data || [];
+
+    setEquipamentos(
+      listaEquipamentos
+    );
+
+    setManutencoes(
+      listaManutencoes
+    );
+
+    const idParam =
+      searchParams.get("id");
+
+    if (idParam) {
+      const equipamento =
+        listaEquipamentos.find(
+          (item) =>
+            item.id.toString() ===
+            idParam
+        );
+
+      if (equipamento) {
+        setEquipamentoSelecionado(
+          equipamento
+        );
+      }
+    }
+
+    setCarregando(false);
   }
 
-  function escolherMaquina(maquina: EquipamentoRelatorio) {
-    setSelecionada(maquina);
+  useEffect(() => {
+    carregarDados();
+  }, [searchParams]);
 
-    window.history.replaceState(
-      null,
-      "",
-      `/relatorios?id=${maquina.id}`
+  function manutencoesDoEquipamento(
+    equipamentoId: number
+  ) {
+    return manutencoes.filter(
+      (manutencao) =>
+        Number(
+          manutencao.equipamento_id
+        ) === equipamentoId
     );
   }
 
-  const historico = selecionada
-    ? manutencoesBanco.filter(
-        (item) =>
-          normalizarNome(item.maquina) ===
-          normalizarNome(selecionada.nome)
-      )
-    : [];
+  function imprimirRelatorio() {
+    window.print();
+  }
 
-  const fotosMaquina = selecionada
-    ? obterFotos(selecionada.fotos)
-    : [];
+  function formatarData(
+    data?: string
+  ) {
+    if (!data) return "-";
+
+    if (
+      /^\d{4}-\d{2}-\d{2}$/.test(data)
+    ) {
+      const [
+        ano,
+        mes,
+        dia,
+      ] = data.split("-");
+
+      return `${dia}/${mes}/${ano}`;
+    }
+
+    return data;
+  }
+
+  if (carregando) {
+    return (
+      <main className="mastermec-app">
+        <section className="page-container">
+          <p>
+            Carregando relatório...
+          </p>
+        </section>
+      </main>
+    );
+  }
 
   return (
-    <main className="relatorio-page">
-      <div className="no-print">
-        <Link href="/maquinas" className="voltar">
-          ← Voltar para Equipamentos
-        </Link>
+    <>
+      <main className="mastermec-app relatorio-page">
 
-        <header className="page-header">
-          <div>
-            <h1>📊 Relatórios</h1>
-            <p>
-              Selecione uma máquina para visualizar e imprimir o relatório.
-            </p>
-          </div>
-        </header>
+        <section className="page-container">
 
-        {carregando && <p>Carregando máquinas e manutenções...</p>}
+          <div className="no-print">
 
-        {erro && <div className="erro">{erro}</div>}
+            <Link
+              href="/"
+              className="voltar"
+            >
+              ← Voltar ao Dashboard
+            </Link>
 
-        {!carregando && maquinas.length === 0 && !erro && (
-          <p>Nenhuma máquina cadastrada.</p>
-        )}
+            <div className="page-header">
 
-        {!carregando && maquinas.length > 0 && (
-          <div className="lista-maquinas">
-            {maquinas.map((maquina) => {
-              const quantidadeRegistros = manutencoesBanco.filter(
-                (item) =>
-                  normalizarNome(item.maquina) ===
-                  normalizarNome(maquina.nome)
-              ).length;
+              <div>
+                <h1>
+                  📊 Relatórios
+                </h1>
 
-              return (
+                <p>
+                  Relatórios completos
+                  das máquinas e histórico
+                  de manutenção.
+                </p>
+              </div>
+
+              {equipamentoSelecionado && (
                 <button
-                  key={maquina.id}
-                  type="button"
-                  className={
-                    selecionada?.id === maquina.id
-                      ? "maquina-card selecionada"
-                      : "maquina-card"
+                  className="btn-salvar"
+                  onClick={
+                    imprimirRelatorio
                   }
-                  onClick={() => escolherMaquina(maquina)}
                 >
-                  <span className="icone-maquina">🚜</span>
-
-                  <span className="maquina-texto">
-                    <strong>{maquina.nome || "Máquina sem nome"}</strong>
-
-                    <small>
-                      {maquina.fabricante || ""} {maquina.modelo || ""}
-                    </small>
-
-                    <small>
-                      {quantidadeRegistros} registro(s) de manutenção
-                    </small>
-                  </span>
+                  🖨️ Imprimir Relatório
                 </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
+              )}
 
-      {selecionada && (
-        <article className="documento">
-          <header className="cabecalho-relatorio">
-            <div>
-              <h1>MasterMec</h1>
-              <p>Gestão e Manutenção de Máquinas</p>
             </div>
 
-            <div className="titulo-relatorio">
-              <h2>RELATÓRIO TÉCNICO</h2>
-              <p>Emissão: {new Date().toLocaleDateString("pt-BR")}</p>
-            </div>
-          </header>
-
-          <div className="linha" />
-
-          <div className="nome-maquina">
-            <div>
-              <small>RELATÓRIO DA MÁQUINA</small>
-              <h2>🚜 {selecionada.nome || "Máquina sem nome"}</h2>
-            </div>
-
-            <div>
-              <strong>Status</strong>
-              <p>{selecionada.status || "Não informado"}</p>
-            </div>
-          </div>
-
-          <div className="acoes-relatorio no-print">
-            <button className="btn-imprimir" onClick={imprimir}>
-              🖨️ Imprimir / Salvar PDF
-            </button>
-          </div>
-
-          {selecionada.foto && (
-            <section className="secao">
-              <h3>📷 Foto da Máquina</h3>
-
-              <img
-                className="foto-principal"
-                src={selecionada.foto}
-                alt={`Foto de ${selecionada.nome || "máquina"}`}
-              />
-            </section>
-          )}
-
-          <section className="secao">
-            <h3>📋 Dados Técnicos</h3>
-
-            <div className="dados-grid">
-              <div>
-                <span>Nome</span>
-                <strong>{selecionada.nome || "-"}</strong>
-              </div>
-
-              <div>
-                <span>Fabricante</span>
-                <strong>{selecionada.fabricante || "-"}</strong>
-              </div>
-
-              <div>
-                <span>Modelo</span>
-                <strong>{selecionada.modelo || "-"}</strong>
-              </div>
-
-              <div>
-                <span>Ano</span>
-                <strong>{texto(selecionada.ano) || "-"}</strong>
-              </div>
-
-              <div>
-                <span>Número de Série</span>
-                <strong>
-                  {selecionada.numero_serie ||
-                    selecionada.numeroSerie ||
-                    "-"}
-                </strong>
-              </div>
-
-              <div>
-                <span>Horímetro</span>
-                <strong>{texto(selecionada.horimetro) || "-"}</strong>
-              </div>
-
-              <div>
-                <span>Tipo</span>
-                <strong>
-                  {selecionada.tipo || selecionada.tipo_maquina || "-"}
-                </strong>
-              </div>
-
-              <div>
-                <span>Próxima Manutenção</span>
-                <strong>
-                  {formatarData(
-                    selecionada.proxima_manutencao ||
-                      selecionada.proximaManutencao ||
-                      ""
-                  )}
-                </strong>
-              </div>
-            </div>
-          </section>
-
-          {selecionada.observacoes && (
-            <section className="secao">
-              <h3>📝 Observações Gerais</h3>
-              <div className="observacoes">
-                {selecionada.observacoes}
-              </div>
-            </section>
-          )}
-
-          <section className="secao">
-            <h3>🔧 Histórico de Manutenção</h3>
-
-            {historico.length === 0 ? (
-              <div className="sem-historico">
-                Nenhuma manutenção encontrada para esta máquina na tabela
-                manutencoes.
-              </div>
-            ) : (
-              <div className="historico-lista">
-                {historico.map((item, index) => {
-                  const servicos = obterServicos(item.servicos);
-                  const fotosDoRegistro = obterFotos(item.fotos);
-
-                  return (
-                    <div
-                      className="historico-item"
-                      key={item.id ?? index}
-                    >
-                      <div className="numero">{index + 1}</div>
-
-                      <div className="historico-conteudo">
-                        <p>
-                          <strong>Data:</strong>{" "}
-                          {formatarData(item.data)}
-                        </p>
-
-                        <p className="descricao">
-                          {item.descricao ||
-                            item.defeito ||
-                            item.observacao ||
-                            "Serviço registrado"}
-                        </p>
-
-                        {item.tipo && (
-                          <p>
-                            <strong>Tipo:</strong> {item.tipo}
-                          </p>
-                        )}
-
-                        {item.mecanico && (
-                          <p>
-                            <strong>Mecânico:</strong> {item.mecanico}
-                          </p>
-                        )}
-
-                        {item.horimetro !== undefined &&
-                          item.horimetro !== null && (
-                            <p>
-                              <strong>Horímetro:</strong>{" "}
-                              {texto(item.horimetro)}
-                            </p>
-                          )}
-
-                        {item.prioridade && (
-                          <p>
-                            <strong>Prioridade:</strong>{" "}
-                            {item.prioridade}
-                          </p>
-                        )}
-
-                        {item.status && (
-                          <p>
-                            <strong>Status:</strong> {item.status}
-                          </p>
-                        )}
-
-                        {servicos.map((servico, servicoIndex) => {
-                          const fotosServico = obterFotos(servico.fotos);
-
-                          return (
-                            <div
-                              key={servico.id ?? servicoIndex}
-                            >
-                              {servico.descricao && (
-                                <p className="descricao">
-                                  {servico.descricao}
-                                </p>
-                              )}
-
-                              {fotosServico.length > 0 && (
-                                <div className="galeria">
-                                  {fotosServico.map(
-                                    (foto, fotoIndex) => (
-                                      <figure
-                                        key={foto.id ?? fotoIndex}
-                                      >
-                                        <img
-                                          src={foto.imagem}
-                                          alt={
-                                            foto.descricao ||
-                                            "Foto do serviço"
-                                          }
-                                        />
-
-                                        {foto.descricao && (
-                                          <figcaption>
-                                            {foto.descricao}
-                                          </figcaption>
-                                        )}
-                                      </figure>
-                                    )
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-
-                        {fotosDoRegistro.length > 0 && (
-                          <div className="galeria">
-                            {fotosDoRegistro.map((foto, fotoIndex) => (
-                              <figure key={foto.id ?? fotoIndex}>
-                                <img
-                                  src={foto.imagem}
-                                  alt={
-                                    foto.descricao ||
-                                    "Foto da manutenção"
-                                  }
-                                />
-
-                                {foto.descricao && (
-                                  <figcaption>
-                                    {foto.descricao}
-                                  </figcaption>
-                                )}
-                              </figure>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+            {erro && (
+              <div
+                style={{
+                  padding: "15px",
+                  marginBottom: "20px",
+                  borderRadius: "10px",
+                  background:
+                    "rgba(255,70,70,.12)",
+                  border:
+                    "1px solid #ff7777",
+                  color: "#ff7777",
+                }}
+              >
+                {erro}
               </div>
             )}
-          </section>
 
-          {fotosMaquina.length > 0 && (
-            <section className="secao">
-              <h3>📸 Fotos da Máquina</h3>
+            <div className="relatorio-introducao">
 
-              <div className="galeria">
-                {fotosMaquina.map((foto, index) => (
-                  <figure key={foto.id ?? index}>
-                    <img
-                      src={foto.imagem}
-                      alt={
-                        foto.descricao ||
-                        `Foto ${index + 1} da máquina`
+              <h2>
+                Selecione uma máquina
+              </h2>
+
+              <p>
+                O histórico agora é
+                relacionado pelo ID do
+                equipamento.
+              </p>
+
+            </div>
+
+            <div className="relatorio-maquinas-grid">
+
+              {equipamentos.map(
+                (equipamento) => {
+
+                  const total =
+                    manutencoesDoEquipamento(
+                      equipamento.id
+                    ).length;
+
+                  return (
+                    <button
+                      key={
+                        equipamento.id
                       }
-                    />
+                      className={
+                        equipamentoSelecionado?.id ===
+                        equipamento.id
+                          ? "relatorio-maquina-card ativo"
+                          : "relatorio-maquina-card"
+                      }
+                      onClick={() =>
+                        setEquipamentoSelecionado(
+                          equipamento
+                        )
+                      }
+                    >
 
-                    {foto.descricao && (
-                      <figcaption>{foto.descricao}</figcaption>
+                      <div className="relatorio-card-icon">
+                        🚜
+                      </div>
+
+                      <div>
+
+                        <h3>
+                          {
+                            equipamento.nome
+                          }
+                        </h3>
+
+                        <p>
+                          {
+                            equipamento.fabricante ||
+                            ""
+                          }{" "}
+                          {
+                            equipamento.modelo ||
+                            ""
+                          }
+                        </p>
+
+                        <span>
+                          {total}{" "}
+                          manutenção(ões)
+                        </span>
+
+                      </div>
+
+                    </button>
+                  );
+                }
+              )}
+
+            </div>
+
+          </div>
+
+          {equipamentoSelecionado && (
+
+            <div className="relatorio-documento">
+
+              <div className="relatorio-cabecalho">
+
+                <div>
+                  <h1>
+                    MasterMec
+                  </h1>
+
+                  <p>
+                    Sistema Inteligente
+                    de Gestão e Manutenção
+                    de Máquinas
+                  </p>
+                </div>
+
+                <div className="relatorio-titulo">
+
+                  <h2>
+                    RELATÓRIO TÉCNICO
+                  </h2>
+
+                  <p>
+                    Emissão:{" "}
+                    {new Date().toLocaleDateString(
+                      "pt-BR"
                     )}
-                  </figure>
-                ))}
+                  </p>
+
+                </div>
+
               </div>
-            </section>
+
+              <div className="relatorio-linha" />
+
+              <div className="relatorio-nome-maquina">
+
+                <div>
+
+                  <span>
+                    RELATÓRIO DA MÁQUINA
+                  </span>
+
+                  <h2>
+                    🚜{" "}
+                    {
+                      equipamentoSelecionado.nome
+                    }
+                  </h2>
+
+                </div>
+
+                <div className="relatorio-status">
+
+                  <strong>
+                    Status
+                  </strong>
+
+                  <span>
+                    {
+                      equipamentoSelecionado.status ||
+                      "Sem status"
+                    }
+                  </span>
+
+                </div>
+
+              </div>
+
+              <div className="cards-grid">
+
+                <div className="card-premium">
+
+                  <h3>
+                    Fabricante
+                  </h3>
+
+                  <p>
+                    {
+                      equipamentoSelecionado.fabricante ||
+                      "-"
+                    }
+                  </p>
+
+                </div>
+
+                <div className="card-premium">
+
+                  <h3>
+                    Modelo
+                  </h3>
+
+                  <p>
+                    {
+                      equipamentoSelecionado.modelo ||
+                      "-"
+                    }
+                  </p>
+
+                </div>
+
+                <div className="card-premium">
+
+                  <h3>
+                    Ano
+                  </h3>
+
+                  <p>
+                    {
+                      equipamentoSelecionado.ano ||
+                      "-"
+                    }
+                  </p>
+
+                </div>
+
+                <div className="card-premium">
+
+                  <h3>
+                    Horímetro
+                  </h3>
+
+                  <p>
+                    {
+                      equipamentoSelecionado.horimetro ||
+                      "-"
+                    }
+                  </p>
+
+                </div>
+
+                <div className="card-premium">
+
+                  <h3>
+                    Localização
+                  </h3>
+
+                  <p>
+                    {
+                      equipamentoSelecionado.localizacao ||
+                      "-"
+                    }
+                  </p>
+
+                </div>
+
+                <div className="card-premium">
+
+                  <h3>
+                    Próxima Manutenção
+                  </h3>
+
+                  <p>
+                    {formatarData(
+                      equipamentoSelecionado.proxima_manutencao
+                    )}
+                  </p>
+
+                </div>
+
+              </div>
+
+              <div className="formulario-maquina">
+
+                <h2>
+                  📋 Histórico de Manutenções
+                </h2>
+
+                {(() => {
+
+                  const historico =
+                    manutencoesDoEquipamento(
+                      equipamentoSelecionado.id
+                    );
+
+                  if (
+                    historico.length ===
+                    0
+                  ) {
+                    return (
+                      <div
+                        style={{
+                          padding: "30px",
+                          textAlign:
+                            "center",
+                        }}
+                      >
+                        <h3>
+                          Nenhuma manutenção
+                          registrada.
+                        </h3>
+
+                        <p>
+                          Este equipamento
+                          ainda não possui
+                          manutenção vinculada
+                          ao ID{" "}
+                          {
+                            equipamentoSelecionado.id
+                          }.
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div>
+
+                      <div
+                        style={{
+                          marginBottom:
+                            "20px",
+                          fontWeight:
+                            "bold",
+                        }}
+                      >
+                        {
+                          historico.length
+                        }{" "}
+                        registro(s)
+                        encontrado(s)
+                      </div>
+
+                      {historico.map(
+                        (manutencao) => (
+
+                          <div
+                            className="manutencao"
+                            key={
+                              manutencao.id
+                            }
+                            style={{
+                              marginBottom:
+                                "25px",
+                            }}
+                          >
+
+                            <div className="manutencao-topo">
+
+                              <div>
+
+                                <h3>
+                                  🔧{" "}
+                                  {
+                                    manutencao.tipo ||
+                                    "Manutenção"
+                                  }
+                                </h3>
+
+                                <p>
+                                  Data:{" "}
+                                  {
+                                    formatarData(
+                                      manutencao.data
+                                    )
+                                  }
+                                </p>
+
+                              </div>
+
+                              <strong>
+                                {
+                                  manutencao.horimetro ||
+                                  "-"
+                                }
+                              </strong>
+
+                            </div>
+
+                            <div className="manutencao-info">
+
+                              <p>
+                                <b>
+                                  Mecânico:
+                                </b>
+                                <br />
+                                {
+                                  manutencao.mecanico ||
+                                  "-"
+                                }
+                              </p>
+
+                              <p>
+                                <b>
+                                  Prioridade:
+                                </b>
+                                <br />
+                                {
+                                  manutencao.prioridade ||
+                                  "-"
+                                }
+                              </p>
+
+                              <p>
+                                <b>
+                                  Status:
+                                </b>
+                                <br />
+                                {
+                                  manutencao.status ||
+                                  "-"
+                                }
+                              </p>
+
+                            </div>
+
+                            {Array.isArray(
+                              manutencao.servicos
+                            ) &&
+                              manutencao.servicos
+                                .length >
+                                0 && (
+
+                                <div
+                                  style={{
+                                    marginTop:
+                                      "20px",
+                                  }}
+                                >
+
+                                  <h3>
+                                    Serviços Executados
+                                  </h3>
+
+                                  {manutencao.servicos.map(
+                                    (
+                                      servico,
+                                      index
+                                    ) => (
+
+                                      <div
+                                        key={
+                                          servico.id ??
+                                          index
+                                        }
+                                        style={{
+                                          marginTop:
+                                            "15px",
+                                          padding:
+                                            "15px",
+                                          border:
+                                            "1px solid rgba(255,255,255,.1)",
+                                          borderRadius:
+                                            "10px",
+                                        }}
+                                      >
+
+                                        <strong>
+                                          Serviço{" "}
+                                          {index +
+                                            1}
+                                        </strong>
+
+                                        <p
+                                          style={{
+                                            whiteSpace:
+                                              "pre-wrap",
+                                          }}
+                                        >
+                                          {
+                                            servico.descricao ||
+                                            "Sem descrição"
+                                          }
+                                        </p>
+
+                                        {Array.isArray(
+                                          servico.fotos
+                                        ) &&
+                                          servico.fotos
+                                            .length >
+                                            0 && (
+
+                                            <div className="fotos-grid">
+
+                                              {servico.fotos.map(
+                                                (
+                                                  foto,
+                                                  fotoIndex
+                                                ) => (
+
+                                                  <div
+                                                    className="foto-card"
+                                                    key={
+                                                      foto.id ??
+                                                      fotoIndex
+                                                    }
+                                                  >
+
+                                                    {foto.imagem && (
+                                                      <img
+                                                        src={
+                                                          foto.imagem
+                                                        }
+                                                        alt={
+                                                          foto.descricao ||
+                                                          "Foto do serviço"
+                                                        }
+                                                      />
+                                                    )}
+
+                                                    <p>
+                                                      {
+                                                        foto.descricao ||
+                                                        "Sem descrição"
+                                                      }
+                                                    </p>
+
+                                                  </div>
+
+                                                )
+                                              )}
+
+                                            </div>
+
+                                          )}
+
+                                      </div>
+
+                                    )
+                                  )}
+
+                                </div>
+
+                              )}
+
+                          </div>
+
+                        )
+                      )}
+
+                    </div>
+                  );
+
+                })()}
+
+              </div>
+
+            </div>
           )}
 
-          <footer className="rodape">
-            <strong>MasterMec</strong>
-            <span>Relatório gerado pelo sistema MasterMec</span>
-          </footer>
-        </article>
-      )}
+        </section>
 
-      <style jsx global>{`
-        .relatorio-page {
-          min-height: 100vh;
-          padding: 24px;
-          background: #101923;
-          color: #f8fafc;
-        }
-
-        .page-header {
-          margin: 24px 0;
-        }
-
-        .page-header h1 {
-          margin: 0 0 8px;
-          font-size: 28px;
-        }
-
-        .page-header p {
-          color: #aeb8c6;
-        }
-
-        .voltar {
-          color: #ffb000;
-          text-decoration: none;
-        }
-
-        .erro {
-          margin: 16px 0;
-          padding: 14px;
-          color: #fecaca;
-          background: #450a0a;
-          border-radius: 8px;
-          overflow-wrap: anywhere;
-        }
-
-        .lista-maquinas {
-          display: grid;
-          grid-template-columns: repeat(
-            auto-fit,
-            minmax(min(280px, 100%), 1fr)
-          );
-          gap: 12px;
-          margin-bottom: 28px;
-        }
-
-        .maquina-card {
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          width: 100%;
-          padding: 16px;
-          color: white;
-          text-align: left;
-          background: #162231;
-          border: 1px solid #334155;
-          border-radius: 10px;
-          cursor: pointer;
-        }
-
-        .maquina-card.selecionada {
-          border-color: #f59e0b;
-          box-shadow: 0 0 0 1px #f59e0b;
-        }
-
-        .icone-maquina {
-          font-size: 28px;
-        }
-
-        .maquina-texto {
-          display: flex;
-          flex-direction: column;
-          gap: 5px;
-          overflow-wrap: anywhere;
-        }
-
-        .maquina-texto small {
-          color: #cbd5e1;
-        }
-
-        .documento {
-          max-width: 1100px;
-          margin: 24px auto;
-          padding: 40px;
-          color: #111827;
-          background: white;
-          border-radius: 10px;
-        }
-
-        .cabecalho-relatorio {
-          display: flex;
-          justify-content: space-between;
-          gap: 20px;
-        }
-
-        .cabecalho-relatorio h1 {
-          margin: 0 0 8px;
-          color: #b45309;
-          font-size: 32px;
-        }
-
-        .cabecalho-relatorio p {
-          margin: 0;
-          color: #374151;
-        }
-
-        .titulo-relatorio {
-          text-align: right;
-        }
-
-        .titulo-relatorio h2 {
-          margin: 0 0 8px;
-          font-size: 20px;
-        }
-
-        .linha {
-          height: 3px;
-          margin: 24px 0;
-          background: #d97706;
-        }
-
-        .nome-maquina {
-          display: flex;
-          justify-content: space-between;
-          gap: 20px;
-          padding: 18px;
-          background: #f3f4f6;
-          border-left: 5px solid #d97706;
-        }
-
-        .nome-maquina small {
-          color: #4b5563;
-          font-weight: bold;
-        }
-
-        .nome-maquina h2 {
-          overflow-wrap: anywhere;
-        }
-
-        .acoes-relatorio {
-          display: flex;
-          justify-content: flex-end;
-          margin: 20px 0;
-        }
-
-        .btn-imprimir {
-          padding: 12px 18px;
-          color: white;
-          background: #b45309;
-          border: 0;
-          border-radius: 8px;
-          cursor: pointer;
-          font-weight: bold;
-        }
-
-        .secao {
-          margin: 28px 0;
-        }
-
-        .secao h3 {
-          padding-bottom: 10px;
-          border-bottom: 2px solid #d1d5db;
-        }
-
-        .dados-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 12px;
-        }
-
-        .dados-grid > div {
-          padding: 12px;
-          background: #f8fafc;
-          border: 1px solid #d1d5db;
-          border-radius: 6px;
-          overflow-wrap: anywhere;
-        }
-
-        .dados-grid span,
-        .dados-grid strong {
-          display: block;
-        }
-
-        .dados-grid span {
-          margin-bottom: 5px;
-          color: #4b5563;
-          font-size: 12px;
-        }
-
-        .observacoes,
-        .sem-historico {
-          padding: 16px;
-          background: #f3f4f6;
-          border-radius: 6px;
-          white-space: pre-wrap;
-          overflow-wrap: anywhere;
-        }
-
-        .historico-lista {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-
-        .historico-item {
-          display: flex;
-          align-items: flex-start;
-          gap: 14px;
-          padding: 16px;
-          border: 1px solid #d1d5db;
-          border-radius: 8px;
-          break-inside: avoid;
-        }
-
-        .numero {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex: 0 0 34px;
-          width: 34px;
-          height: 34px;
-          color: white;
-          background: #b45309;
-          border-radius: 50%;
-          font-weight: bold;
-        }
-
-        .historico-conteudo {
-          min-width: 0;
-          flex: 1;
-          overflow-wrap: anywhere;
-        }
-
-        .historico-conteudo p {
-          margin: 6px 0;
-        }
-
-        .descricao {
-          white-space: pre-wrap;
-        }
-
-        .galeria {
-          display: grid;
-          grid-template-columns: repeat(
-            auto-fit,
-            minmax(min(200px, 100%), 1fr)
-          );
-          gap: 12px;
-          margin-top: 14px;
-        }
-
-        .galeria figure {
-          min-width: 0;
-          margin: 0;
-          padding: 6px;
-          border: 1px solid #d1d5db;
-          border-radius: 6px;
-          break-inside: avoid;
-        }
-
-        .galeria img {
-          display: block;
-          width: 100%;
-          max-height: 350px;
-          object-fit: contain;
-        }
-
-        .galeria figcaption {
-          padding: 8px 4px;
-          font-size: 13px;
-          overflow-wrap: anywhere;
-        }
-
-        .foto-principal {
-          display: block;
-          max-width: 100%;
-          max-height: 450px;
-          margin: auto;
-          object-fit: contain;
-        }
-
-        .rodape {
-          display: flex;
-          justify-content: space-between;
-          gap: 16px;
-          margin-top: 40px;
-          padding-top: 16px;
-          border-top: 2px solid #d1d5db;
-          color: #374151;
-          font-size: 12px;
-        }
-
-        @media (max-width: 650px) {
-          .relatorio-page {
-            padding: 14px;
-          }
-
-          .documento {
-            padding: 18px;
-          }
-
-          .cabecalho-relatorio,
-          .nome-maquina,
-          .rodape {
-            flex-direction: column;
-          }
-
-          .titulo-relatorio {
-            text-align: left;
-          }
-
-          .dados-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-
-        @media print {
-          body {
-            background: white !important;
-          }
-
-          .no-print {
-            display: none !important;
-          }
-
-          .relatorio-page {
-            padding: 0 !important;
-            background: white !important;
-          }
-
-          .documento {
-            max-width: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border-radius: 0 !important;
-          }
-
-          .secao,
-          .historico-item,
-          .galeria figure {
-            break-inside: avoid;
-          }
-
-          @page {
-            size: A4;
-            margin: 15mm;
-          }
-        }
-      `}</style>
-    </main>
+      </main>
+    </>
   );
 }
