@@ -1,9 +1,17 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import {
+  Search,
+  Plus,
+  Pencil,
+  Trash2,
+  Eye,
+  Printer,
+  X,
+  Save,
+} from "lucide-react";
 
 type Foto = {
   id?: number | string;
@@ -44,1902 +52,1461 @@ type Equipamento = {
   historico?: unknown[];
 };
 
-function verificarAlertaManutencao(
-  dataStr: string
-) {
-  if (!dataStr) return false;
-
-  const hoje = new Date();
-
-  hoje.setHours(
-    0,
-    0,
-    0,
-    0
-  );
-
-  const [
-    ano,
-    mes,
-    dia,
-  ] = dataStr
-    .split("-")
-    .map(Number);
-
-  const dataManut =
-    new Date(
-      ano,
-      mes - 1,
-      dia
-    );
-
-  const diffTime =
-    dataManut.getTime() -
-    hoje.getTime();
-
-  const diffDays =
-    Math.ceil(
-      diffTime /
-        (1000 *
-          60 *
-          60 *
-          24)
-    );
-
-  return diffDays <= 7;
-}
-
-function formatarData(
-  data?: string
-) {
-  if (!data) return "-";
-
-  if (
-    /^\d{4}-\d{2}-\d{2}$/.test(
-      data
-    )
-  ) {
-    const [
-      ano,
-      mes,
-      dia,
-    ] = data.split("-");
-
-    return `${dia}/${mes}/${ano}`;
-  }
-
-  return data;
-}
-
 export default function MaquinasPage() {
-  const router = useRouter();
+  const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
+  const [manutencoes, setManutencoes] = useState<Manutencao[]>([]);
+  const [busca, setBusca] = useState("");
+  const [carregando, setCarregando] = useState(true);
 
-  const [
-    equipamentos,
-    setEquipamentos,
-  ] = useState<Equipamento[]>([]);
+  const [equipamentoSelecionado, setEquipamentoSelecionado] =
+    useState<Equipamento | null>(null);
 
-  const [
-    manutencoes,
-    setManutencoes,
-  ] = useState<Manutencao[]>([]);
+  const [mostrarCadastro, setMostrarCadastro] = useState(false);
+  const [editandoId, setEditandoId] = useState<number | null>(null);
 
-  const [
-    filtroBusca,
-    setFiltroBusca,
-  ] = useState("");
-
-  const [
-    mostrarCadastro,
-    setMostrarCadastro,
-  ] = useState(false);
-
-  const [
-    equipamentoSelecionado,
-    setEquipamentoSelecionado,
-  ] =
-    useState<Equipamento | null>(
-      null
-    );
-
-  const [
-    editando,
-    setEditando,
-  ] = useState(false);
-
-  const [
-    idEdicao,
-    setIdEdicao,
-  ] = useState<number | null>(
-    null
-  );
-
-  const [
-    carregando,
-    setCarregando,
-  ] = useState(true);
-
-  const [
-    nome,
-    setNome,
-  ] = useState("");
-
-  const [
-    modelo,
-    setModelo,
-  ] = useState("");
-
-  const [
-    fabricante,
-    setFabricante,
-  ] = useState("");
-
-  const [
-    ano,
-    setAno,
-  ] = useState("");
-
-  const [
-    horimetro,
-    setHorimetro,
-  ] = useState("");
-
-  const [
-    responsavel,
-    setResponsavel,
-  ] = useState("");
-
-  const [
-    localizacao,
-    setLocalizacao,
-  ] = useState("");
-
-  const [
-    status,
-    setStatus,
-  ] = useState(
-    "Operando"
-  );
-
-  const [
-    proximaManutencao,
-    setProximaManutencao,
-  ] = useState("");
-
-  async function carregarDados() {
-    setCarregando(true);
-
-    const [
-      equipamentosResponse,
-      manutencoesResponse,
-    ] = await Promise.all([
-      supabase
-        .from("equipamentos")
-        .select("*")
-        .order("id", {
-          ascending: true,
-        }),
-
-      supabase
-        .from("manutencoes")
-        .select("*")
-        .order("id", {
-          ascending: false,
-        }),
-    ]);
-
-    if (
-      equipamentosResponse.error
-    ) {
-      console.error(
-        "Erro ao buscar equipamentos:",
-        equipamentosResponse.error
-      );
-
-      alert(
-        "Erro ao carregar equipamentos: " +
-          equipamentosResponse
-            .error.message
-      );
-
-      setCarregando(false);
-
-      return;
-    }
-
-    if (
-      manutencoesResponse.error
-    ) {
-      console.error(
-        "Erro ao buscar manutenções:",
-        manutencoesResponse.error
-      );
-
-      alert(
-        "Erro ao carregar manutenções: " +
-          manutencoesResponse
-            .error.message
-      );
-
-      setCarregando(false);
-
-      return;
-    }
-
-    const listaEquipamentos =
-      equipamentosResponse.data ||
-      [];
-
-    const listaManutencoes =
-      manutencoesResponse.data ||
-      [];
-
-    setEquipamentos(
-      listaEquipamentos
-    );
-
-    setManutencoes(
-      listaManutencoes
-    );
-
-    /*
-     * Se a página foi aberta através
-     * de /maquinas?id=7, seleciona
-     * automaticamente o equipamento.
-     */
-
-    const params =
-      new URLSearchParams(
-        window.location.search
-      );
-
-    const idParam =
-      params.get("id");
-
-    if (idParam) {
-      const equipamento =
-        listaEquipamentos.find(
-          (item: Equipamento) =>
-            item.id.toString() ===
-            idParam
-        );
-
-      if (equipamento) {
-        setEquipamentoSelecionado(
-          equipamento
-        );
-      }
-    }
-
-    setCarregando(false);
-  }
+  const [form, setForm] = useState({
+    nome: "",
+    modelo: "",
+    fabricante: "",
+    ano: "",
+    horimetro: "",
+    responsavel: "",
+    localizacao: "",
+    status: "Operando",
+    proxima_manutencao: "",
+  });
 
   useEffect(() => {
     carregarDados();
   }, []);
 
-  async function salvarCadastro() {
-    if (
-      !nome.trim() ||
-      !modelo.trim() ||
-      !fabricante.trim()
-    ) {
-      alert(
-        "Preencha Nome, Modelo e Fabricante."
-      );
+  async function carregarDados() {
+    setCarregando(true);
 
+    const [equipamentosResult, manutencoesResult] = await Promise.all([
+      supabase
+        .from("equipamentos")
+        .select("*")
+        .order("id", { ascending: true }),
+
+      supabase
+        .from("manutencoes")
+        .select("*")
+        .order("id", { ascending: false }),
+    ]);
+
+    if (equipamentosResult.error) {
+      console.error(equipamentosResult.error);
+      alert("Erro ao carregar as máquinas.");
+      setCarregando(false);
       return;
     }
 
-    if (idEdicao !== null) {
-      const {
-        error,
-      } = await supabase
+    if (manutencoesResult.error) {
+      console.error(manutencoesResult.error);
+      alert("Erro ao carregar as manutenções.");
+      setCarregando(false);
+      return;
+    }
+
+    setEquipamentos((equipamentosResult.data || []) as Equipamento[]);
+    setManutencoes((manutencoesResult.data || []) as Manutencao[]);
+
+    setCarregando(false);
+  }
+
+  function abrirNovoCadastro() {
+    setEditandoId(null);
+
+    setForm({
+      nome: "",
+      modelo: "",
+      fabricante: "",
+      ano: "",
+      horimetro: "",
+      responsavel: "",
+      localizacao: "",
+      status: "Operando",
+      proxima_manutencao: "",
+    });
+
+    setMostrarCadastro(true);
+    setEquipamentoSelecionado(null);
+  }
+
+  function editarEquipamento(equipamento: Equipamento) {
+    setEditandoId(equipamento.id);
+
+    setForm({
+      nome: equipamento.nome || "",
+      modelo: equipamento.modelo || "",
+      fabricante: equipamento.fabricante || "",
+      ano: equipamento.ano || "",
+      horimetro: equipamento.horimetro || "",
+      responsavel: equipamento.responsavel || "",
+      localizacao: equipamento.localizacao || "",
+      status: equipamento.status || "Operando",
+      proxima_manutencao: equipamento.proxima_manutencao || "",
+    });
+
+    setMostrarCadastro(true);
+    setEquipamentoSelecionado(null);
+  }
+
+  async function salvarCadastro() {
+    if (!form.nome.trim()) {
+      alert("Informe o nome da máquina.");
+      return;
+    }
+
+    if (editandoId) {
+      const { error } = await supabase
         .from("equipamentos")
         .update({
-          nome: nome.trim(),
-          modelo: modelo.trim(),
-          fabricante:
-            fabricante.trim(),
-          ano: ano.trim(),
-          horimetro:
-            horimetro.trim(),
-          responsavel:
-            responsavel.trim(),
-          localizacao:
-            localizacao.trim(),
-          status,
-          proxima_manutencao:
-            proximaManutencao ||
-            null,
+          nome: form.nome.trim(),
+          modelo: form.modelo.trim(),
+          fabricante: form.fabricante.trim(),
+          ano: form.ano.trim(),
+          horimetro: form.horimetro.trim(),
+          responsavel: form.responsavel.trim(),
+          localizacao: form.localizacao.trim(),
+          status: form.status,
+          proxima_manutencao: form.proxima_manutencao,
         })
-        .eq(
-          "id",
-          idEdicao
-        );
+        .eq("id", editandoId);
 
       if (error) {
         console.error(error);
-
-        alert(
-          "Erro do Banco: " +
-            error.message
-        );
-
+        alert("Erro ao atualizar a máquina.");
         return;
       }
+    } else {
+      const { error } = await supabase.from("equipamentos").insert({
+        nome: form.nome.trim(),
+        modelo: form.modelo.trim(),
+        fabricante: form.fabricante.trim(),
+        ano: form.ano.trim(),
+        horimetro: form.horimetro.trim(),
+        responsavel: form.responsavel.trim(),
+        localizacao: form.localizacao.trim(),
+        status: form.status,
+        proxima_manutencao: form.proxima_manutencao,
+        historico: [],
+      });
 
-      alert(
-        "Equipamento atualizado com sucesso!"
-      );
-
-      limparFormulario();
-
-      await carregarDados();
-
-      return;
+      if (error) {
+        console.error(error);
+        alert("Erro ao cadastrar a máquina.");
+        return;
+      }
     }
 
-    const {
-      error,
-    } = await supabase
-      .from("equipamentos")
-      .insert([
-        {
-          nome: nome.trim(),
-          modelo: modelo.trim(),
-          fabricante:
-            fabricante.trim(),
-          ano: ano.trim(),
-          horimetro:
-            horimetro.trim(),
-          responsavel:
-            responsavel.trim(),
-          localizacao:
-            localizacao.trim(),
-          status,
-          proxima_manutencao:
-            proximaManutencao ||
-            null,
-          historico: [],
-        },
-      ]);
-
-    if (error) {
-      console.error(error);
-
-      alert(
-        "Erro do Banco: " +
-          error.message
-      );
-
-      return;
-    }
-
-    alert(
-      "Equipamento cadastrado com sucesso!"
-    );
-
-    limparFormulario();
-
+    setMostrarCadastro(false);
+    setEditandoId(null);
     await carregarDados();
   }
 
-  function limparFormulario() {
-    setNome("");
-    setModelo("");
-    setFabricante("");
-    setAno("");
-    setHorimetro("");
-    setResponsavel("");
-    setLocalizacao("");
-    setStatus("Operando");
-    setProximaManutencao("");
-
-    setIdEdicao(null);
-
-    setMostrarCadastro(false);
-
-    setEditando(false);
-  }
-
-  function iniciarEdicao(
-    equipamento: Equipamento
-  ) {
-    setIdEdicao(
-      equipamento.id
+  async function excluirEquipamento(id: number) {
+    const confirmar = window.confirm(
+      "Deseja realmente excluir esta máquina?\n\nO histórico de manutenção vinculado também será excluído."
     );
 
-    setNome(
-      equipamento.nome || ""
-    );
+    if (!confirmar) return;
 
-    setModelo(
-      equipamento.modelo || ""
-    );
-
-    setFabricante(
-      equipamento.fabricante ||
-        ""
-    );
-
-    setAno(
-      equipamento.ano || ""
-    );
-
-    setHorimetro(
-      equipamento.horimetro ||
-        ""
-    );
-
-    setResponsavel(
-      equipamento.responsavel ||
-        ""
-    );
-
-    setLocalizacao(
-      equipamento.localizacao ||
-        ""
-    );
-
-    setStatus(
-      equipamento.status ||
-        "Operando"
-    );
-
-    setProximaManutencao(
-      equipamento.proxima_manutencao ||
-        ""
-    );
-
-    setMostrarCadastro(true);
-
-    setEditando(true);
-
-    setEquipamentoSelecionado(
-      null
-    );
-  }
-
-  async function excluirEquipamento(
-    id: number
-  ) {
-    const confirmar =
-      confirm(
-        "Deseja realmente excluir este equipamento?\n\nAs manutenções vinculadas a ele também serão excluídas."
-      );
-
-    if (!confirmar) {
-      return;
-    }
-
-    const {
-      error,
-    } = await supabase
+    const { error } = await supabase
       .from("equipamentos")
       .delete()
-      .eq(
-        "id",
-        id
-      );
+      .eq("id", id);
 
     if (error) {
       console.error(error);
-
-      alert(
-        "Erro ao excluir: " +
-          error.message
-      );
-
+      alert("Erro ao excluir a máquina.");
       return;
     }
 
-    if (
-      equipamentoSelecionado?.id ===
-      id
-    ) {
-      setEquipamentoSelecionado(
-        null
-      );
-    }
-
+    setEquipamentoSelecionado(null);
     await carregarDados();
   }
 
-  function abrirEquipamento(
-    equipamento: Equipamento
-  ) {
-    setEquipamentoSelecionado(
-      equipamento
-    );
-
-    setMostrarCadastro(false);
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  }
-
-  function abrirRelatorio(
-    equipamento: Equipamento
-  ) {
-    router.push(
-      `/relatorios?id=${equipamento.id}`
-    );
-  }
-
-  const filtrados =
-    equipamentos.filter(
-      (eq) => {
-        const busca =
-          filtroBusca
-            .toLowerCase()
-            .trim();
-
-        return (
-          eq.nome
-            .toLowerCase()
-            .includes(busca) ||
-
-          eq.modelo
-            .toLowerCase()
-            .includes(busca) ||
-
-          eq.fabricante
-            .toLowerCase()
-            .includes(busca) ||
-
-          (
-            eq.localizacao ||
-            ""
-          )
-            .toLowerCase()
-            .includes(busca)
-        );
-      }
-    );
-
-  function historicoDaMaquina(
-    equipamentoId: number
-  ) {
+  function historicoDaMaquina(id: number) {
     return manutencoes.filter(
       (manutencao) =>
-        Number(
-          manutencao.equipamento_id
-        ) ===
-        Number(
-          equipamentoId
-        )
+        Number(manutencao.equipamento_id) === Number(id)
     );
   }
 
-  /*
-   * =====================================================
-   * DETALHES DO EQUIPAMENTO
-   * =====================================================
-   */
-
-  if (
-    equipamentoSelecionado
-  ) {
-    const historico =
-      historicoDaMaquina(
-        equipamentoSelecionado.id
-      );
-
-    const emAlerta =
-      verificarAlertaManutencao(
-        equipamentoSelecionado.proxima_manutencao
-      );
-
-    const urlQr =
-      `${window.location.origin}/maquinas?id=${equipamentoSelecionado.id}`;
-
-    const qrCodeApi =
-      `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
-        urlQr
-      )}`;
-
-    return (
-      <main className="Robert-app">
-
-        <div className="page-container">
-
-          <button
-            onClick={() =>
-              setEquipamentoSelecionado(
-                null
-              )
-            }
-            className="voltar"
-          >
-            ← Voltar para Lista de Equipamentos
-          </button>
-
-          <header className="page-header">
-
-            <div>
-
-              <h1>
-                🚜{" "}
-                {
-                  equipamentoSelecionado.nome
-                }
-              </h1>
-
-              <p>
-                {
-                  equipamentoSelecionado.fabricante
-                }{" "}
-                -{" "}
-                {
-                  equipamentoSelecionado.modelo
-                }{" "}
-                (
-                {
-                  equipamentoSelecionado.ano ||
-                  "-"
-                }
-                )
-              </p>
-
-            </div>
-
-            <div
-              style={{
-                display:
-                  "flex",
-                gap: "10px",
-                alignItems:
-                  "center",
-                flexWrap:
-                  "wrap",
-              }}
-            >
-
-              {emAlerta && (
-                <span
-                  style={{
-                    background:
-                      "rgba(255, 70, 70, 0.25)",
-                    color:
-                      "#ff7777",
-                    padding:
-                      "8px 14px",
-                    borderRadius:
-                      "20px",
-                    fontWeight:
-                      "bold",
-                    fontSize:
-                      "12px",
-                    border:
-                      "1px solid #ff7777",
-                  }}
-                >
-                  ⚠️ ALERTA DE REVISÃO
-                </span>
-              )}
-
-              <span
-                className={
-                  equipamentoSelecionado.status ===
-                  "Operando"
-                    ? "status-operando"
-                    : equipamentoSelecionado.status ===
-                      "Em Manutenção"
-                    ? "status-manutencao"
-                    : "status-parada"
-                }
-              >
-                {
-                  equipamentoSelecionado.status
-                }
-              </span>
-
-            </div>
-
-          </header>
-
-          {/* =================================================
-              QR CODE
-          ================================================= */}
-
-          <div
-            className="formulario-maquina"
-            style={{
-              display:
-                "flex",
-              alignItems:
-                "center",
-              gap: "30px",
-              flexWrap:
-                "wrap",
-            }}
-          >
-
-            <div>
-
-              <img
-                src={qrCodeApi}
-                alt="QR Code do Equipamento"
-                style={{
-                  background:
-                    "white",
-                  padding:
-                    "8px",
-                  borderRadius:
-                    "10px",
-                  width:
-                    "160px",
-                  height:
-                    "160px",
-                }}
-              />
-
-            </div>
-
-            <div
-              style={{
-                flex: 1,
-              }}
-            >
-
-              <h2
-                style={{
-                  color:
-                    "#ffb000",
-                  marginBottom:
-                    "8px",
-                }}
-              >
-                QR Code de Identificação
-              </h2>
-
-              <p
-                style={{
-                  color:
-                    "#aeb8c6",
-                  fontSize:
-                    "14px",
-                  marginBottom:
-                    "15px",
-                  lineHeight:
-                    "1.5",
-                }}
-              >
-                Cole este QR Code
-                diretamente no
-                equipamento.
-              </p>
-
-              <div
-                style={{
-                  display:
-                    "flex",
-                  gap: "10px",
-                  flexWrap:
-                    "wrap",
-                }}
-              >
-
-                <button
-                  onClick={() =>
-                    window.print()
-                  }
-                  className="btn-salvar"
-                >
-                  🖨️ Imprimir QR Code
-                </button>
-
-                <button
-                  onClick={() =>
-                    iniciarEdicao(
-                      equipamentoSelecionado
-                    )
-                  }
-                  className="btn-novo"
-                >
-                  ✏️ Modificar Dados
-                </button>
-
-                <button
-                  onClick={() =>
-                    abrirRelatorio(
-                      equipamentoSelecionado
-                    )
-                  }
-                  className="btn-novo"
-                >
-                  📊 Abrir Relatório
-                </button>
-
-              </div>
-
-            </div>
-
-          </div>
-
-          {/* =================================================
-              INFORMAÇÕES
-          ================================================= */}
-
-          <div
-            className="cards-grid"
-            style={{
-              marginBottom:
-                "25px",
-            }}
-          >
-
-            <div className="card-premium">
-
-              <h3>
-                Localização Atual
-              </h3>
-
-              <p
-                style={{
-                  fontSize:
-                    "20px",
-                  color:
-                    "white",
-                  fontWeight:
-                    "bold",
-                }}
-              >
-                {
-                  equipamentoSelecionado.localizacao ||
-                  "Não informada"
-                }
-              </p>
-
-            </div>
-
-            <div className="card-premium">
-
-              <h3>
-                Horímetro / KM
-              </h3>
-
-              <p
-                style={{
-                  fontSize:
-                    "22px",
-                  color:
-                    "white",
-                  fontWeight:
-                    "bold",
-                }}
-              >
-                {
-                  equipamentoSelecionado.horimetro ||
-                  "-"
-                }
-              </p>
-
-            </div>
-
-            <div className="card-premium">
-
-              <h3>
-                Próxima Revisão
-              </h3>
-
-              <p
-                style={{
-                  fontSize:
-                    "20px",
-                  color:
-                    emAlerta
-                      ? "#ff7777"
-                      : "white",
-                  fontWeight:
-                    "bold",
-                }}
-              >
-                {
-                  formatarData(
-                    equipamentoSelecionado.proxima_manutencao
-                  )
-                }
-
-                {emAlerta &&
-                  " ⚠️"}
-
-              </p>
-
-            </div>
-
-            <div className="card-premium">
-
-              <h3>
-                Total de Manutenções
-              </h3>
-
-              <p
-                style={{
-                  fontSize:
-                    "22px",
-                  color:
-                    "white",
-                  fontWeight:
-                    "bold",
-                }}
-              >
-                {
-                  historico.length
-                }
-              </p>
-
-            </div>
-
-          </div>
-
-          {/* =================================================
-              HISTÓRICO REAL DO SUPABASE
-          ================================================= */}
-
-          <div className="formulario-maquina">
-
-            <div
-              style={{
-                display:
-                  "flex",
-                justifyContent:
-                  "space-between",
-                alignItems:
-                  "center",
-                gap:
-                  "15px",
-                flexWrap:
-                  "wrap",
-                marginBottom:
-                  "15px",
-              }}
-            >
-
-              <div>
-
-                <h2>
-                  📋 Histórico de Manutenções e Ocorrências
-                </h2>
-
-                <p
-                  style={{
-                    color:
-                      "#8e9bab",
-                    marginTop:
-                      "5px",
-                  }}
-                >
-                  Histórico vinculado
-                  diretamente pelo ID
-                  do equipamento.
-                </p>
-
-              </div>
-
-              <button
-                className="btn-salvar"
-                onClick={() =>
-                  abrirRelatorio(
-                    equipamentoSelecionado
-                  )
-                }
-              >
-                📊 Ver Relatório Completo
-              </button>
-
-            </div>
-
-            <div className="tabela-container">
-
-              <table>
-
-                <thead>
-
-                  <tr>
-
-                    <th>
-                      Data
-                    </th>
-
-                    <th>
-                      Tipo
-                    </th>
-
-                    <th>
-                      Serviços
-                    </th>
-
-                    <th>
-                      Mecânico
-                    </th>
-
-                    <th>
-                      Horímetro
-                    </th>
-
-                    <th>
-                      Prioridade
-                    </th>
-
-                    <th>
-                      Status
-                    </th>
-
-                  </tr>
-
-                </thead>
-
-                <tbody>
-
-                  {historico.length >
-                  0 ? (
-
-                    historico.map(
-                      (
-                        manutencao
-                      ) => (
-
-                        <tr
-                          key={
-                            manutencao.id
-                          }
-                        >
-
-                          <td>
-                            {
-                              formatarData(
-                                manutencao.data
-                              )
-                            }
-                          </td>
-
-                          <td>
-                            {
-                              manutencao.tipo ||
-                              "-"
-                            }
-                          </td>
-
-                          <td>
-
-                            {Array.isArray(
-                              manutencao.servicos
-                            )
-                              ? manutencao.servicos
-                                  .length
-                              : 0}{" "}
-                            serviço(s)
-
-                          </td>
-
-                          <td>
-                            {
-                              manutencao.mecanico ||
-                              "-"
-                            }
-                          </td>
-
-                          <td>
-                            {
-                              manutencao.horimetro ||
-                              "-"
-                            }
-                          </td>
-
-                          <td>
-                            {
-                              manutencao.prioridade ||
-                              "-"
-                            }
-                          </td>
-
-                          <td>
-                            {
-                              manutencao.status ||
-                              "-"
-                            }
-                          </td>
-
-                        </tr>
-
-                      )
-                    )
-
-                  ) : (
-
-                    <tr>
-
-                      <td
-                        colSpan={
-                          7
-                        }
-                        style={{
-                          textAlign:
-                            "center",
-                          color:
-                            "#8e9bab",
-                          padding:
-                            "40px",
-                        }}
-                      >
-
-                        <h3>
-                          Nenhuma manutenção registrada
-                        </h3>
-
-                        <p
-                          style={{
-                            marginTop:
-                              "8px",
-                          }}
-                        >
-                          Este equipamento
-                          ainda não possui
-                          manutenção vinculada
-                          ao ID{" "}
-                          <strong>
-                            {
-                              equipamentoSelecionado.id
-                            }
-                          </strong>
-                          .
-
-                        </p>
-
-                      </td>
-
-                    </tr>
-
-                  )}
-
-                </tbody>
-
-              </table>
-
-            </div>
-
-          </div>
-
-          {/* =================================================
-              DETALHAMENTO DOS SERVIÇOS
-          ================================================= */}
-
-          {historico.length >
-            0 && (
-
-            <div
-              className="formulario-maquina"
-              style={{
-                marginTop:
-                  "25px",
-              }}
-            >
-
-              <h2>
-                🔧 Detalhamento dos Serviços
-              </h2>
-
-              {historico.map(
-                (
-                  manutencao
-                ) => (
-
-                  <div
-                    className="manutencao"
-                    key={
-                      `detalhe-${manutencao.id}`
-                    }
-                    style={{
-                      marginTop:
-                        "20px",
-                    }}
-                  >
-
-                    <div className="manutencao-topo">
-
-                      <div>
-
-                        <h3>
-                          🔧{" "}
-                          {
-                            manutencao.tipo ||
-                            "Manutenção"
-                          }
-                        </h3>
-
-                        <p>
-                          Data:{" "}
-                          {
-                            formatarData(
-                              manutencao.data
-                            )
-                          }
-                        </p>
-
-                      </div>
-
-                      <strong>
-                        {
-                          manutencao.horimetro ||
-                          "-"
-                        }
-                      </strong>
-
+  function formatarData(data?: string) {
+    if (!data) return "-";
+
+    const partes = data.split("-");
+
+    if (partes.length === 3) {
+      return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    }
+
+    return data;
+  }
+
+  function escaparHtml(valor: unknown) {
+    return String(valor ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function imprimirMaquina(equipamento: Equipamento) {
+    const historico = historicoDaMaquina(equipamento.id);
+
+    const janela = window.open("", "_blank");
+
+    if (!janela) {
+      alert("Permita pop-ups no navegador para imprimir.");
+      return;
+    }
+
+    const dataEmissao = new Date().toLocaleString("pt-BR");
+
+    const historicoHtml =
+      historico.length > 0
+        ? historico
+            .map((manutencao, index) => {
+              const servicos = Array.isArray(manutencao.servicos)
+                ? manutencao.servicos
+                : [];
+
+              const servicosHtml =
+                servicos.length > 0
+                  ? servicos
+                      .map((servico) => {
+                        const fotos = Array.isArray(servico.fotos)
+                          ? servico.fotos
+                          : [];
+
+                        const fotosHtml =
+                          fotos.length > 0
+                            ? `
+                              <div class="fotos">
+                                ${fotos
+                                  .map(
+                                    (foto) => `
+                                      <div class="foto">
+                                        ${
+                                          foto.imagem
+                                            ? `<img src="${escaparHtml(
+                                                foto.imagem
+                                              )}" />`
+                                            : ""
+                                        }
+                                        ${
+                                          foto.descricao
+                                            ? `<div>${escaparHtml(
+                                                foto.descricao
+                                              )}</div>`
+                                            : ""
+                                        }
+                                      </div>
+                                    `
+                                  )
+                                  .join("")}
+                              </div>
+                            `
+                            : "";
+
+                        return `
+                          <div class="servico">
+                            <strong>Serviço:</strong>
+                            ${escaparHtml(
+                              servico.descricao || "Sem descrição"
+                            )}
+                            ${fotosHtml}
+                          </div>
+                        `;
+                      })
+                      .join("")
+                  : "<p>Nenhum serviço registrado.</p>";
+
+              return `
+                <div class="manutencao">
+                  <h3>Manutenção ${index + 1}</h3>
+
+                  <div class="grid">
+                    <div>
+                      <strong>Data</strong>
+                      <span>${escaparHtml(
+                        formatarData(manutencao.data)
+                      )}</span>
                     </div>
 
-                    {Array.isArray(
-                      manutencao.servicos
-                    ) &&
-                      manutencao.servicos.map(
-                        (
-                          servico,
-                          index
-                        ) => (
+                    <div>
+                      <strong>Tipo</strong>
+                      <span>${escaparHtml(
+                        manutencao.tipo || "-"
+                      )}</span>
+                    </div>
 
-                          <div
-                            key={
-                              servico.id ??
-                              index
-                            }
-                            style={{
-                              marginTop:
-                                "15px",
-                              padding:
-                                "15px",
-                              border:
-                                "1px solid rgba(255,255,255,.1)",
-                              borderRadius:
-                                "10px",
-                            }}
-                          >
+                    <div>
+                      <strong>Mecânico</strong>
+                      <span>${escaparHtml(
+                        manutencao.mecanico || "-"
+                      )}</span>
+                    </div>
 
-                            <h4>
-                              Serviço{" "}
-                              {index +
-                                1}
-                            </h4>
+                    <div>
+                      <strong>Horímetro</strong>
+                      <span>${escaparHtml(
+                        manutencao.horimetro || "-"
+                      )}</span>
+                    </div>
 
-                            <p
-                              style={{
-                                marginTop:
-                                  "8px",
-                                whiteSpace:
-                                  "pre-wrap",
-                              }}
-                            >
-                              {
-                                servico.descricao ||
-                                "Sem descrição"
-                              }
-                            </p>
+                    <div>
+                      <strong>Prioridade</strong>
+                      <span>${escaparHtml(
+                        manutencao.prioridade || "-"
+                      )}</span>
+                    </div>
 
-                            {Array.isArray(
-                              servico.fotos
-                            ) &&
-                              servico.fotos
-                                .length >
-                                0 && (
-
-                                <div
-                                  className="fotos-grid"
-                                  style={{
-                                    marginTop:
-                                      "15px",
-                                  }}
-                                >
-
-                                  {servico.fotos.map(
-                                    (
-                                      foto,
-                                      fotoIndex
-                                    ) => (
-
-                                      <div
-                                        className="foto-card"
-                                        key={
-                                          foto.id ??
-                                          fotoIndex
-                                        }
-                                      >
-
-                                        {foto.imagem && (
-                                          <img
-                                            src={
-                                              foto.imagem
-                                            }
-                                            alt={
-                                              foto.descricao ||
-                                              "Foto do serviço"
-                                            }
-                                          />
-                                        )}
-
-                                        <p>
-                                          {
-                                            foto.descricao ||
-                                            "Sem descrição"
-                                          }
-                                        </p>
-
-                                      </div>
-
-                                    )
-                                  )}
-
-                                </div>
-
-                              )}
-
-                          </div>
-
-                        )
-                      )}
-
+                    <div>
+                      <strong>Status</strong>
+                      <span>${escaparHtml(
+                        manutencao.status || "-"
+                      )}</span>
+                    </div>
                   </div>
 
-                )
+                  <div class="servicos">
+                    <h4>Serviços realizados</h4>
+                    ${servicosHtml}
+                  </div>
+                </div>
+              `;
+            })
+            .join("")
+        : `
+          <div class="sem-historico">
+            Nenhuma manutenção registrada para esta máquina.
+          </div>
+        `;
+
+    janela.document.write(`
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Relatório - ${escaparHtml(equipamento.nome)}</title>
+
+        <style>
+          * {
+            box-sizing: border-box;
+          }
+
+          body {
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 0;
+            padding: 30px;
+            color: #111;
+            background: #fff;
+          }
+
+          .cabecalho {
+            border-bottom: 3px solid #222;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+          }
+
+          .cabecalho h1 {
+            margin: 0;
+            font-size: 25px;
+          }
+
+          .cabecalho p {
+            margin: 6px 0 0;
+            font-size: 13px;
+          }
+
+          .titulo {
+            font-size: 21px;
+            margin-bottom: 18px;
+          }
+
+          .dados {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 30px;
+          }
+
+          .campo {
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+          }
+
+          .campo strong {
+            display: block;
+            font-size: 11px;
+            color: #555;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+          }
+
+          .campo span {
+            font-size: 14px;
+          }
+
+          .status {
+            font-weight: bold;
+          }
+
+          .resumo {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-bottom: 25px;
+          }
+
+          .resumo strong {
+            font-size: 18px;
+          }
+
+          .manutencao {
+            border: 1px solid #bbb;
+            padding: 18px;
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+          }
+
+          .manutencao h3 {
+            margin-top: 0;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 8px;
+          }
+
+          .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 18px;
+          }
+
+          .grid div {
+            border: 1px solid #ddd;
+            padding: 9px;
+          }
+
+          .grid strong {
+            display: block;
+            font-size: 10px;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+          }
+
+          .grid span {
+            font-size: 13px;
+          }
+
+          .servicos h4 {
+            margin-bottom: 10px;
+          }
+
+          .servico {
+            border-left: 3px solid #444;
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            background: #f7f7f7;
+          }
+
+          .fotos {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+          }
+
+          .foto {
+            width: 150px;
+            border: 1px solid #ccc;
+            padding: 5px;
+            background: #fff;
+          }
+
+          .foto img {
+            width: 100%;
+            height: 110px;
+            object-fit: contain;
+          }
+
+          .foto div {
+            font-size: 10px;
+            margin-top: 5px;
+          }
+
+          .sem-historico {
+            border: 1px solid #ccc;
+            padding: 20px;
+            text-align: center;
+          }
+
+          .rodape {
+            margin-top: 35px;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+            font-size: 11px;
+            color: #666;
+          }
+
+          @media print {
+            body {
+              padding: 15px;
+            }
+
+            .manutencao {
+              page-break-inside: avoid;
+            }
+          }
+        </style>
+      </head>
+
+      <body>
+
+        <div class="cabecalho">
+          <h1>MasterMec</h1>
+          <p>Controle de Manutenção de Máquinas</p>
+        </div>
+
+        <div class="titulo">
+          Relatório da Máquina
+        </div>
+
+        <div class="dados">
+
+          <div class="campo">
+            <strong>Máquina</strong>
+            <span>${escaparHtml(equipamento.nome)}</span>
+          </div>
+
+          <div class="campo">
+            <strong>Modelo</strong>
+            <span>${escaparHtml(equipamento.modelo)}</span>
+          </div>
+
+          <div class="campo">
+            <strong>Fabricante</strong>
+            <span>${escaparHtml(equipamento.fabricante)}</span>
+          </div>
+
+          <div class="campo">
+            <strong>Ano</strong>
+            <span>${escaparHtml(equipamento.ano)}</span>
+          </div>
+
+          <div class="campo">
+            <strong>Horímetro atual</strong>
+            <span>${escaparHtml(equipamento.horimetro)}</span>
+          </div>
+
+          <div class="campo">
+            <strong>Status</strong>
+            <span class="status">
+              ${escaparHtml(equipamento.status)}
+            </span>
+          </div>
+
+          <div class="campo">
+            <strong>Responsável</strong>
+            <span>${escaparHtml(equipamento.responsavel)}</span>
+          </div>
+
+          <div class="campo">
+            <strong>Localização</strong>
+            <span>${escaparHtml(equipamento.localizacao)}</span>
+          </div>
+
+          <div class="campo">
+            <strong>Próxima manutenção</strong>
+            <span>
+              ${escaparHtml(
+                formatarData(equipamento.proxima_manutencao)
               )}
-
-            </div>
-
-          )}
+            </span>
+          </div>
 
         </div>
 
+        <div class="resumo">
+          <strong>
+            Total de manutenções: ${historico.length}
+          </strong>
+        </div>
+
+        <h2>Histórico de Manutenção</h2>
+
+        ${historicoHtml}
+
+        <div class="rodape">
+          Relatório emitido em ${escaparHtml(dataEmissao)}
+          <br />
+          MasterMec - Gestão de Manutenção
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 500);
+          };
+        </script>
+
+      </body>
+      </html>
+    `);
+
+    janela.document.close();
+  }
+
+  const equipamentosFiltrados = equipamentos.filter((equipamento) => {
+    const texto = `
+      ${equipamento.nome}
+      ${equipamento.modelo}
+      ${equipamento.fabricante}
+      ${equipamento.localizacao}
+      ${equipamento.status}
+    `.toLowerCase();
+
+    return texto.includes(busca.toLowerCase());
+  });
+
+  if (equipamentoSelecionado) {
+    const historico = historicoDaMaquina(
+      equipamentoSelecionado.id
+    );
+
+    return (
+      <main className="mastermec-app">
+        <div
+          style={{
+            padding: "25px",
+            maxWidth: "1400px",
+            margin: "0 auto",
+          }}
+        >
+          <button
+            onClick={() => setEquipamentoSelecionado(null)}
+            style={{
+              border: "none",
+              background: "#eee",
+              padding: "10px 16px",
+              borderRadius: "8px",
+              cursor: "pointer",
+              marginBottom: "20px",
+            }}
+          >
+            ← Voltar para máquinas
+          </button>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "15px",
+              flexWrap: "wrap",
+            }}
+          >
+            <div>
+              <h1 style={{ margin: 0 }}>
+                {equipamentoSelecionado.nome}
+              </h1>
+
+              <p style={{ marginTop: "6px", color: "#666" }}>
+                {equipamentoSelecionado.fabricante}{" "}
+                {equipamentoSelecionado.modelo}
+              </p>
+            </div>
+
+            <button
+              onClick={() =>
+                imprimirMaquina(equipamentoSelecionado)
+              }
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                border: "none",
+                background: "#222",
+                color: "#fff",
+                padding: "12px 18px",
+                borderRadius: "8px",
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              <Printer size={19} />
+              Imprimir
+            </button>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns:
+                "repeat(auto-fit,minmax(180px,1fr))",
+              gap: "15px",
+              marginTop: "25px",
+            }}
+          >
+            <div className="card">
+              <strong>Status</strong>
+              <div style={{ marginTop: "8px", fontSize: "18px" }}>
+                {equipamentoSelecionado.status}
+              </div>
+            </div>
+
+            <div className="card">
+              <strong>Horímetro</strong>
+              <div style={{ marginTop: "8px", fontSize: "18px" }}>
+                {equipamentoSelecionado.horimetro || "-"}
+              </div>
+            </div>
+
+            <div className="card">
+              <strong>Fabricante</strong>
+              <div style={{ marginTop: "8px", fontSize: "18px" }}>
+                {equipamentoSelecionado.fabricante || "-"}
+              </div>
+            </div>
+
+            <div className="card">
+              <strong>Modelo</strong>
+              <div style={{ marginTop: "8px", fontSize: "18px" }}>
+                {equipamentoSelecionado.modelo || "-"}
+              </div>
+            </div>
+
+            <div className="card">
+              <strong>Localização</strong>
+              <div style={{ marginTop: "8px", fontSize: "18px" }}>
+                {equipamentoSelecionado.localizacao || "-"}
+              </div>
+            </div>
+
+            <div className="card">
+              <strong>Manutenções</strong>
+              <div style={{ marginTop: "8px", fontSize: "18px" }}>
+                {historico.length}
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              marginTop: "30px",
+              background: "#fff",
+              borderRadius: "12px",
+              padding: "20px",
+              boxShadow: "0 2px 10px rgba(0,0,0,.08)",
+            }}
+          >
+            <h2>Histórico de manutenção</h2>
+
+            {historico.length === 0 ? (
+              <p>Nenhuma manutenção registrada.</p>
+            ) : (
+              historico.map((manutencao) => (
+                <div
+                  key={manutencao.id}
+                  style={{
+                    border: "1px solid #ddd",
+                    borderRadius: "10px",
+                    padding: "18px",
+                    marginTop: "15px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns:
+                        "repeat(auto-fit,minmax(150px,1fr))",
+                      gap: "12px",
+                    }}
+                  >
+                    <div>
+                      <strong>Data</strong>
+                      <div>
+                        {formatarData(manutencao.data)}
+                      </div>
+                    </div>
+
+                    <div>
+                      <strong>Tipo</strong>
+                      <div>{manutencao.tipo || "-"}</div>
+                    </div>
+
+                    <div>
+                      <strong>Mecânico</strong>
+                      <div>{manutencao.mecanico || "-"}</div>
+                    </div>
+
+                    <div>
+                      <strong>Horímetro</strong>
+                      <div>{manutencao.horimetro || "-"}</div>
+                    </div>
+
+                    <div>
+                      <strong>Status</strong>
+                      <div>{manutencao.status || "-"}</div>
+                    </div>
+                  </div>
+
+                  {Array.isArray(manutencao.servicos) &&
+                    manutencao.servicos.length > 0 && (
+                      <div style={{ marginTop: "20px" }}>
+                        <strong>Serviços realizados</strong>
+
+                        {manutencao.servicos.map(
+                          (servico, index) => (
+                            <div
+                              key={servico.id ?? index}
+                              style={{
+                                marginTop: "10px",
+                                padding: "12px",
+                                background: "#f5f5f5",
+                                borderRadius: "8px",
+                              }}
+                            >
+                              {servico.descricao ||
+                                "Sem descrição"}
+
+                              {Array.isArray(servico.fotos) &&
+                                servico.fotos.length > 0 && (
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      gap: "10px",
+                                      flexWrap: "wrap",
+                                      marginTop: "10px",
+                                    }}
+                                  >
+                                    {servico.fotos.map(
+                                      (foto, fotoIndex) =>
+                                        foto.imagem ? (
+                                          <div
+                                            key={
+                                              foto.id ??
+                                              fotoIndex
+                                            }
+                                          >
+                                            <img
+                                              src={foto.imagem}
+                                              alt={
+                                                foto.descricao ||
+                                                "Foto"
+                                              }
+                                              style={{
+                                                width: "150px",
+                                                height: "110px",
+                                                objectFit:
+                                                  "cover",
+                                                borderRadius:
+                                                  "8px",
+                                              }}
+                                            />
+
+                                            {foto.descricao && (
+                                              <div
+                                                style={{
+                                                  fontSize:
+                                                    "12px",
+                                                  marginTop:
+                                                    "4px",
+                                                }}
+                                              >
+                                                {
+                                                  foto.descricao
+                                                }
+                                              </div>
+                                            )}
+                                          </div>
+                                        ) : null
+                                    )}
+                                  </div>
+                                )}
+                            </div>
+                          )
+                        )}
+                      </div>
+                    )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </main>
     );
   }
 
-  /*
-   * =====================================================
-   * LISTA DE EQUIPAMENTOS
-   * =====================================================
-   */
-
   return (
-    <main className="Robert-app">
-
-      <div className="page-container">
-
-        <Link
-          href="/"
-          className="voltar"
+    <main className="mastermec-app">
+      <div
+        style={{
+          padding: "25px",
+          maxWidth: "1500px",
+          margin: "0 auto",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "15px",
+            flexWrap: "wrap",
+            marginBottom: "25px",
+          }}
         >
-          ← Voltar à Visão Geral do Sistema
-        </Link>
-
-        <header className="page-header">
-
           <div>
-
-            <h1>
-              🚜 Equipamentos
-            </h1>
-
-            <p>
-              Gerenciamento completo da
-              frota sincronizado na nuvem.
+            <h1 style={{ margin: 0 }}>Máquinas</h1>
+            <p style={{ color: "#666" }}>
+              Equipamentos cadastrados no sistema
             </p>
-
           </div>
 
           <button
-            className="btn-novo"
-            onClick={() => {
-
-              if (
-                mostrarCadastro
-              ) {
-                limparFormulario();
-              } else {
-                setMostrarCadastro(
-                  true
-                );
-              }
-
+            onClick={abrirNovoCadastro}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              background: "#222",
+              color: "#fff",
+              border: "none",
+              padding: "12px 18px",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontWeight: 600,
             }}
           >
-            {mostrarCadastro
-              ? "Cancelar"
-              : "+ Novo Equipamento"}
+            <Plus size={19} />
+            Nova máquina
           </button>
+        </div>
 
-        </header>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            background: "#fff",
+            border: "1px solid #ddd",
+            borderRadius: "8px",
+            padding: "10px 14px",
+            marginBottom: "20px",
+          }}
+        >
+          <Search size={20} color="#777" />
 
-        {/* =================================================
-            FORMULÁRIO
-        ================================================= */}
+          <input
+            type="text"
+            placeholder="Pesquisar máquina..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            style={{
+              border: "none",
+              outline: "none",
+              width: "100%",
+              fontSize: "15px",
+            }}
+          />
+        </div>
 
-        {mostrarCadastro && (
-
-          <div className="formulario-maquina">
-
-            <h2>
-              {editando
-                ? "Editar Equipamento"
-                : "Cadastro de Novo Equipamento"}
-            </h2>
-
-            <div className="form-grid">
-
-              <input
-                value={nome}
-                onChange={(e) =>
-                  setNome(
-                    e.target.value
-                  )
-                }
-                placeholder="Nome/Identificação (Ex: Escavadeira 01)"
-              />
-
-              <input
-                value={modelo}
-                onChange={(e) =>
-                  setModelo(
-                    e.target.value
-                  )
-                }
-                placeholder="Modelo (Ex: R160LC-9S)"
-              />
-
-              <input
-                value={
-                  fabricante
-                }
-                onChange={(e) =>
-                  setFabricante(
-                    e.target.value
-                  )
-                }
-                placeholder="Fabricante (Ex: Hyundai)"
-              />
-
-              <input
-                value={ano}
-                onChange={(e) =>
-                  setAno(
-                    e.target.value
-                  )
-                }
-                placeholder="Ano (Ex: 2020)"
-              />
-
-              <input
-                value={
-                  horimetro
-                }
-                onChange={(e) =>
-                  setHorimetro(
-                    e.target.value
-                  )
-                }
-                placeholder="Horímetro ou KM (Ex: 8500 h)"
-              />
-
-              <input
-                value={
-                  responsavel
-                }
-                onChange={(e) =>
-                  setResponsavel(
-                    e.target.value
-                  )
-                }
-                placeholder="Responsável"
-              />
-
-              <input
-                value={
-                  localizacao
-                }
-                onChange={(e) =>
-                  setLocalizacao(
-                    e.target.value
-                  )
-                }
-                placeholder="Localização (Ex: Obra Indaiatuba)"
-              />
-
-              <div
-                style={{
-                  display:
-                    "flex",
-                  flexDirection:
-                    "column",
-                  gap:
-                    "4px",
-                }}
-              >
-
-                <label
-                  style={{
-                    fontSize:
-                      "12px",
-                    color:
-                      "#aeb8c6",
-                  }}
-                >
-                  Próxima Revisão / Manutenção
-                </label>
-
-                <input
-                  type="date"
-                  value={
-                    proximaManutencao
-                  }
-                  onChange={(e) =>
-                    setProximaManutencao(
-                      e.target.value
-                    )
-                  }
-                />
-
-              </div>
-
-              <select
-                value={
-                  status
-                }
-                onChange={(e) =>
-                  setStatus(
-                    e.target.value
-                  )
-                }
-              >
-
-                <option value="Operando">
-                  Operando
-                </option>
-
-                <option value="Em Manutenção">
-                  Em Manutenção
-                </option>
-
-                <option value="Parada">
-                  Parada
-                </option>
-
-              </select>
-
-            </div>
-
-            <div className="form-botoes">
-
-              <button
-                className="btn-cancelar"
-                onClick={
-                  limparFormulario
-                }
-              >
-                Cancelar
-              </button>
-
-              <button
-                className="btn-salvar"
-                onClick={
-                  salvarCadastro
-                }
-              >
-                {editando
-                  ? "Salvar Alterações"
-                  : "Salvar Equipamento"}
-              </button>
-
-            </div>
-
+        {carregando ? (
+          <div style={{ padding: "30px", textAlign: "center" }}>
+            Carregando máquinas...
           </div>
-
-        )}
-
-        {/* =================================================
-            BUSCA
-        ================================================= */}
-
-        <input
-          className="busca-container"
-          placeholder="Buscar equipamento por nome, modelo, fabricante ou localização..."
-          value={
-            filtroBusca
-          }
-          onChange={(e) =>
-            setFiltroBusca(
-              e.target.value
-            )
-          }
-        />
-
-        {/* =================================================
-            TABELA
-        ================================================= */}
-
-        <div className="tabela-container">
-
-          {carregando ? (
-
-            <p
+        ) : equipamentosFiltrados.length === 0 ? (
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: "10px",
+              padding: "40px",
+              textAlign: "center",
+            }}
+          >
+            Nenhuma máquina encontrada.
+          </div>
+        ) : (
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: "12px",
+              overflowX: "auto",
+              boxShadow: "0 2px 10px rgba(0,0,0,.06)",
+            }}
+          >
+            <table
               style={{
-                padding:
-                  "40px",
-                textAlign:
-                  "center",
+                width: "100%",
+                borderCollapse: "collapse",
+                minWidth: "950px",
               }}
             >
-              Carregando equipamentos...
-            </p>
-
-          ) : (
-
-            <table>
-
               <thead>
-
-                <tr>
-
-                  <th>
-                    Equipamento
+                <tr
+                  style={{
+                    background: "#f4f4f4",
+                    textAlign: "left",
+                  }}
+                >
+                  <th style={{ padding: "14px" }}>
+                    Máquina
                   </th>
 
-                  <th>
+                  <th style={{ padding: "14px" }}>
                     Modelo
                   </th>
 
-                  <th>
-                    Localização
+                  <th style={{ padding: "14px" }}>
+                    Fabricante
                   </th>
 
-                  <th>
-                    Próxima Revisão
+                  <th style={{ padding: "14px" }}>
+                    Horímetro
                   </th>
 
-                  <th>
-                    Horímetro / KM
-                  </th>
-
-                  <th>
-                    Manutenções
-                  </th>
-
-                  <th>
+                  <th style={{ padding: "14px" }}>
                     Status
                   </th>
 
-                  <th>
-                    Ações
+                  <th style={{ padding: "14px" }}>
+                    Manutenções
                   </th>
 
+                  <th
+                    style={{
+                      padding: "14px",
+                      textAlign: "center",
+                    }}
+                  >
+                    Ações
+                  </th>
                 </tr>
-
               </thead>
 
               <tbody>
+                {equipamentosFiltrados.map((equipamento) => {
+                  const totalManutencoes =
+                    historicoDaMaquina(
+                      equipamento.id
+                    ).length;
 
-                {filtrados.map(
-                  (eq) => {
-
-                    const emAlerta =
-                      verificarAlertaManutencao(
-                        eq.proxima_manutencao
-                      );
-
-                    const totalManutencoes =
-                      historicoDaMaquina(
-                        eq.id
-                      ).length;
-
-                    return (
-
-                      <tr
-                        key={
-                          eq.id
-                        }
-                        style={
-                          emAlerta
-                            ? {
-                                background:
-                                  "rgba(255, 70, 70, 0.08)",
-                              }
-                            : {}
-                        }
-                      >
-
-                        <td>
-                          🚜{" "}
-                          {eq.nome}
-                        </td>
-
-                        <td>
-                          {
-                            eq.modelo
-                          }
-                        </td>
-
-                        <td>
-                          📍{" "}
-                          {
-                            eq.localizacao ||
-                            "Não informada"
-                          }
-                        </td>
-
-                        <td>
-
-                          <span
-                            style={
-                              emAlerta
-                                ? {
-                                    color:
-                                      "#ff7777",
-                                    fontWeight:
-                                      "bold",
-                                  }
-                                : {}
-                            }
-                          >
-
-                            {
-                              formatarData(
-                                eq.proxima_manutencao
-                              )
-                            }
-
-                            {emAlerta &&
-                              " ⚠️"}
-
-                          </span>
-
-                        </td>
-
-                        <td>
-                          {
-                            eq.horimetro ||
-                            "-"
-                          }
-                        </td>
-
-                        <td>
-
-                          <strong>
-                            {
-                              totalManutencoes
-                            }
-                          </strong>
-
-                          {" "}
-                          registro(s)
-
-                        </td>
-
-                        <td>
-
-                          <span
-                            className={
-                              eq.status ===
-                              "Operando"
-                                ? "status-operando"
-                                : eq.status ===
-                                  "Em Manutenção"
-                                ? "status-manutencao"
-                                : "status-parada"
-                            }
-                          >
-                            {
-                              eq.status
-                            }
-                          </span>
-
-                        </td>
-
-                        <td>
-
-                          <div
-                            style={{
-                              display:
-                                "flex",
-                              gap:
-                                "6px",
-                              flexWrap:
-                                "wrap",
-                            }}
-                          >
-
-                            <button
-                              className="btn-editar"
-                              onClick={() =>
-                                abrirEquipamento(
-                                  eq
-                                )
-                              }
-                              title="Visualizar"
-                            >
-                              👁
-                            </button>
-
-                            <button
-                              className="btn-editar"
-                              onClick={() =>
-                                iniciarEdicao(
-                                  eq
-                                )
-                              }
-                              title="Editar"
-                            >
-                              ✏️
-                            </button>
-
-                            <button
-                              className="btn-editar"
-                              onClick={() =>
-                                abrirRelatorio(
-                                  eq
-                                )
-                              }
-                              title="Relatório"
-                            >
-                              📊
-                            </button>
-
-                            <button
-                              className="btn-excluir"
-                              onClick={() =>
-                                excluirEquipamento(
-                                  eq.id
-                                )
-                              }
-                              title="Excluir"
-                            >
-                              🗑
-                            </button>
-
-                          </div>
-
-                        </td>
-
-                      </tr>
-
-                    );
-                  }
-                )}
-
-                {filtrados.length ===
-                  0 && (
-
-                  <tr>
-
-                    <td
-                      colSpan={
-                        8
-                      }
+                  return (
+                    <tr
+                      key={equipamento.id}
                       style={{
-                        textAlign:
-                          "center",
-                        padding:
-                          "30px",
-                        color:
-                          "#8e9bab",
+                        borderTop: "1px solid #eee",
                       }}
                     >
-                      Nenhum equipamento
-                      encontrado na nuvem.
-                    </td>
+                      <td style={{ padding: "14px" }}>
+                        <strong>{equipamento.nome}</strong>
+                      </td>
 
-                  </tr>
+                      <td style={{ padding: "14px" }}>
+                        {equipamento.modelo || "-"}
+                      </td>
 
-                )}
+                      <td style={{ padding: "14px" }}>
+                        {equipamento.fabricante || "-"}
+                      </td>
 
+                      <td style={{ padding: "14px" }}>
+                        {equipamento.horimetro || "-"}
+                      </td>
+
+                      <td style={{ padding: "14px" }}>
+                        <span
+                          style={{
+                            display: "inline-block",
+                            padding: "6px 10px",
+                            borderRadius: "20px",
+                            background:
+                              equipamento.status ===
+                              "Operando"
+                                ? "#dff5e3"
+                                : equipamento.status ===
+                                  "Em Manutenção"
+                                ? "#fff0c2"
+                                : "#f5dada",
+                            fontWeight: 600,
+                            fontSize: "13px",
+                          }}
+                        >
+                          {equipamento.status}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: "14px" }}>
+                        {totalManutencoes}
+                      </td>
+
+                      <td
+                        style={{
+                          padding: "14px",
+                          textAlign: "center",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                        >
+                          {/* VISUALIZAR */}
+                          <button
+                            title="Ver máquina"
+                            onClick={() =>
+                              setEquipamentoSelecionado(
+                                equipamento
+                              )
+                            }
+                            style={{
+                              width: "38px",
+                              height: "38px",
+                              border: "none",
+                              borderRadius: "7px",
+                              background: "#eee",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <Eye size={18} />
+                          </button>
+
+                          {/* IMPRIMIR */}
+                          <button
+                            title="Imprimir máquina"
+                            onClick={() =>
+                              imprimirMaquina(
+                                equipamento
+                              )
+                            }
+                            style={{
+                              width: "38px",
+                              height: "38px",
+                              border: "none",
+                              borderRadius: "7px",
+                              background: "#222",
+                              color: "#fff",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <Printer size={18} />
+                          </button>
+
+                          {/* EDITAR */}
+                          <button
+                            title="Editar máquina"
+                            onClick={() =>
+                              editarEquipamento(
+                                equipamento
+                              )
+                            }
+                            style={{
+                              width: "38px",
+                              height: "38px",
+                              border: "none",
+                              borderRadius: "7px",
+                              background: "#eee",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <Pencil size={18} />
+                          </button>
+
+                          {/* EXCLUIR */}
+                          <button
+                            title="Excluir máquina"
+                            onClick={() =>
+                              excluirEquipamento(
+                                equipamento.id
+                              )
+                            }
+                            style={{
+                              width: "38px",
+                              height: "38px",
+                              border: "none",
+                              borderRadius: "7px",
+                              background: "#f7dddd",
+                              color: "#b00000",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
-
             </table>
+          </div>
+        )}
 
-          )}
+        {/* CADASTRO / EDIÇÃO */}
+        {mostrarCadastro && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,.55)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "20px",
+              zIndex: 9999,
+            }}
+          >
+            <div
+              style={{
+                background: "#fff",
+                borderRadius: "12px",
+                padding: "25px",
+                width: "100%",
+                maxWidth: "700px",
+                maxHeight: "90vh",
+                overflowY: "auto",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "20px",
+                }}
+              >
+                <h2 style={{ margin: 0 }}>
+                  {editandoId
+                    ? "Editar máquina"
+                    : "Nova máquina"}
+                </h2>
 
-        </div>
+                <button
+                  onClick={() =>
+                    setMostrarCadastro(false)
+                  }
+                  style={{
+                    border: "none",
+                    background: "#eee",
+                    width: "38px",
+                    height: "38px",
+                    borderRadius: "50%",
+                    cursor: "pointer",
+                  }}
+                >
+                  <X size={19} />
+                </button>
+              </div>
 
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns:
+                    "repeat(auto-fit,minmax(220px,1fr))",
+                  gap: "15px",
+                }}
+              >
+                <div>
+                  <label>Nome da máquina</label>
+                  <input
+                    value={form.nome}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        nome: e.target.value,
+                      })
+                    }
+                    style={inputStyle}
+                  />
+                </div>
+
+                <div>
+                  <label>Modelo</label>
+                  <input
+                    value={form.modelo}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        modelo: e.target.value,
+                      })
+                    }
+                    style={inputStyle}
+                  />
+                </div>
+
+                <div>
+                  <label>Fabricante</label>
+                  <input
+                    value={form.fabricante}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        fabricante: e.target.value,
+                      })
+                    }
+                    style={inputStyle}
+                  />
+                </div>
+
+                <div>
+                  <label>Ano</label>
+                  <input
+                    value={form.ano}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        ano: e.target.value,
+                      })
+                    }
+                    style={inputStyle}
+                  />
+                </div>
+
+                <div>
+                  <label>Horímetro</label>
+                  <input
+                    value={form.horimetro}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        horimetro: e.target.value,
+                      })
+                    }
+                    style={inputStyle}
+                  />
+                </div>
+
+                <div>
+                  <label>Status</label>
+
+                  <select
+                    value={form.status}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        status: e.target.value,
+                      })
+                    }
+                    style={inputStyle}
+                  >
+                    <option value="Operando">
+                      Operando
+                    </option>
+
+                    <option value="Em Manutenção">
+                      Em Manutenção
+                    </option>
+
+                    <option value="Parada">
+                      Parada
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label>Responsável</label>
+                  <input
+                    value={form.responsavel}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        responsavel: e.target.value,
+                      })
+                    }
+                    style={inputStyle}
+                  />
+                </div>
+
+                <div>
+                  <label>Localização</label>
+                  <input
+                    value={form.localizacao}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        localizacao: e.target.value,
+                      })
+                    }
+                    style={inputStyle}
+                  />
+                </div>
+
+                <div>
+                  <label>Próxima manutenção</label>
+                  <input
+                    type="date"
+                    value={form.proxima_manutencao}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        proxima_manutencao:
+                          e.target.value,
+                      })
+                    }
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={salvarCadastro}
+                style={{
+                  marginTop: "25px",
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  background: "#222",
+                  color: "#fff",
+                  border: "none",
+                  padding: "14px",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                <Save size={19} />
+                Salvar máquina
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-
     </main>
   );
 }
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  marginTop: "6px",
+  padding: "11px",
+  border: "1px solid #ccc",
+  borderRadius: "7px",
+  outline: "none",
+  fontSize: "14px",
+};
