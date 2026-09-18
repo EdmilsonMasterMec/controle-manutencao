@@ -33,6 +33,26 @@ type Equipamento = {
   proxima_manutencao: string;
   historico: ManutencaoItem[] | unknown;
 };
+type Manutencao = {
+  id: number;
+  equipamento_id: number;
+  maquina: string;
+  tipo: string;
+  mecanico: string;
+  data: string;
+  horimetro: string;
+  prioridade: string;
+  status: string;
+  servicos: {
+    id?: number | string;
+    descricao?: string;
+    fotos?: {
+      id?: number | string;
+      imagem?: string;
+      descricao?: string;
+    }[];
+  }[];
+};
 
 function verificarAlertaManutencao(dataStr?: string) {
   if (!dataStr) return false;
