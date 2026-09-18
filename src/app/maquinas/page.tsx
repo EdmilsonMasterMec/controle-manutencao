@@ -504,4 +504,1442 @@ export default function MaquinasPage() {
   async function excluirEquipamento(
     id: number
   ) {
-    const
+    const confirmar =
+      confirm(
+        "Deseja realmente excluir este equipamento?\n\nAs manutenções vinculadas a ele também serão excluídas."
+      );
+
+    if (!confirmar) {
+      return;
+    }
+
+    const {
+      error,
+    } = await supabase
+      .from("equipamentos")
+      .delete()
+      .eq(
+        "id",
+        id
+      );
+
+    if (error) {
+      console.error(error);
+
+      alert(
+        "Erro ao excluir: " +
+          error.message
+      );
+
+      return;
+    }
+
+    if (
+      equipamentoSelecionado?.id ===
+      id
+    ) {
+      setEquipamentoSelecionado(
+        null
+      );
+    }
+
+    await carregarDados();
+  }
+
+  function abrirEquipamento(
+    equipamento: Equipamento
+  ) {
+    setEquipamentoSelecionado(
+      equipamento
+    );
+
+    setMostrarCadastro(false);
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
+  function abrirRelatorio(
+    equipamento: Equipamento
+  ) {
+    router.push(
+      `/relatorios?id=${equipamento.id}`
+    );
+  }
+
+  const filtrados =
+    equipamentos.filter(
+      (eq) => {
+        const busca =
+          filtroBusca
+            .toLowerCase()
+            .trim();
+
+        return (
+          eq.nome
+            .toLowerCase()
+            .includes(busca) ||
+
+          eq.modelo
+            .toLowerCase()
+            .includes(busca) ||
+
+          eq.fabricante
+            .toLowerCase()
+            .includes(busca) ||
+
+          (
+            eq.localizacao ||
+            ""
+          )
+            .toLowerCase()
+            .includes(busca)
+        );
+      }
+    );
+
+  function historicoDaMaquina(
+    equipamentoId: number
+  ) {
+    return manutencoes.filter(
+      (manutencao) =>
+        Number(
+          manutencao.equipamento_id
+        ) ===
+        Number(
+          equipamentoId
+        )
+    );
+  }
+
+  /*
+   * =====================================================
+   * DETALHES DO EQUIPAMENTO
+   * =====================================================
+   */
+
+  if (
+    equipamentoSelecionado
+  ) {
+    const historico =
+      historicoDaMaquina(
+        equipamentoSelecionado.id
+      );
+
+    const emAlerta =
+      verificarAlertaManutencao(
+        equipamentoSelecionado.proxima_manutencao
+      );
+
+    const urlQr =
+      `${window.location.origin}/maquinas?id=${equipamentoSelecionado.id}`;
+
+    const qrCodeApi =
+      `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
+        urlQr
+      )}`;
+
+    return (
+      <main className="Robert-app">
+
+        <div className="page-container">
+
+          <button
+            onClick={() =>
+              setEquipamentoSelecionado(
+                null
+              )
+            }
+            className="voltar"
+          >
+            ← Voltar para Lista de Equipamentos
+          </button>
+
+          <header className="page-header">
+
+            <div>
+
+              <h1>
+                🚜{" "}
+                {
+                  equipamentoSelecionado.nome
+                }
+              </h1>
+
+              <p>
+                {
+                  equipamentoSelecionado.fabricante
+                }{" "}
+                -{" "}
+                {
+                  equipamentoSelecionado.modelo
+                }{" "}
+                (
+                {
+                  equipamentoSelecionado.ano ||
+                  "-"
+                }
+                )
+              </p>
+
+            </div>
+
+            <div
+              style={{
+                display:
+                  "flex",
+                gap: "10px",
+                alignItems:
+                  "center",
+                flexWrap:
+                  "wrap",
+              }}
+            >
+
+              {emAlerta && (
+                <span
+                  style={{
+                    background:
+                      "rgba(255, 70, 70, 0.25)",
+                    color:
+                      "#ff7777",
+                    padding:
+                      "8px 14px",
+                    borderRadius:
+                      "20px",
+                    fontWeight:
+                      "bold",
+                    fontSize:
+                      "12px",
+                    border:
+                      "1px solid #ff7777",
+                  }}
+                >
+                  ⚠️ ALERTA DE REVISÃO
+                </span>
+              )}
+
+              <span
+                className={
+                  equipamentoSelecionado.status ===
+                  "Operando"
+                    ? "status-operando"
+                    : equipamentoSelecionado.status ===
+                      "Em Manutenção"
+                    ? "status-manutencao"
+                    : "status-parada"
+                }
+              >
+                {
+                  equipamentoSelecionado.status
+                }
+              </span>
+
+            </div>
+
+          </header>
+
+          {/* =================================================
+              QR CODE
+          ================================================= */}
+
+          <div
+            className="formulario-maquina"
+            style={{
+              display:
+                "flex",
+              alignItems:
+                "center",
+              gap: "30px",
+              flexWrap:
+                "wrap",
+            }}
+          >
+
+            <div>
+
+              <img
+                src={qrCodeApi}
+                alt="QR Code do Equipamento"
+                style={{
+                  background:
+                    "white",
+                  padding:
+                    "8px",
+                  borderRadius:
+                    "10px",
+                  width:
+                    "160px",
+                  height:
+                    "160px",
+                }}
+              />
+
+            </div>
+
+            <div
+              style={{
+                flex: 1,
+              }}
+            >
+
+              <h2
+                style={{
+                  color:
+                    "#ffb000",
+                  marginBottom:
+                    "8px",
+                }}
+              >
+                QR Code de Identificação
+              </h2>
+
+              <p
+                style={{
+                  color:
+                    "#aeb8c6",
+                  fontSize:
+                    "14px",
+                  marginBottom:
+                    "15px",
+                  lineHeight:
+                    "1.5",
+                }}
+              >
+                Cole este QR Code
+                diretamente no
+                equipamento.
+              </p>
+
+              <div
+                style={{
+                  display:
+                    "flex",
+                  gap: "10px",
+                  flexWrap:
+                    "wrap",
+                }}
+              >
+
+                <button
+                  onClick={() =>
+                    window.print()
+                  }
+                  className="btn-salvar"
+                >
+                  🖨️ Imprimir QR Code
+                </button>
+
+                <button
+                  onClick={() =>
+                    iniciarEdicao(
+                      equipamentoSelecionado
+                    )
+                  }
+                  className="btn-novo"
+                >
+                  ✏️ Modificar Dados
+                </button>
+
+                <button
+                  onClick={() =>
+                    abrirRelatorio(
+                      equipamentoSelecionado
+                    )
+                  }
+                  className="btn-novo"
+                >
+                  📊 Abrir Relatório
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* =================================================
+              INFORMAÇÕES
+          ================================================= */}
+
+          <div
+            className="cards-grid"
+            style={{
+              marginBottom:
+                "25px",
+            }}
+          >
+
+            <div className="card-premium">
+
+              <h3>
+                Localização Atual
+              </h3>
+
+              <p
+                style={{
+                  fontSize:
+                    "20px",
+                  color:
+                    "white",
+                  fontWeight:
+                    "bold",
+                }}
+              >
+                {
+                  equipamentoSelecionado.localizacao ||
+                  "Não informada"
+                }
+              </p>
+
+            </div>
+
+            <div className="card-premium">
+
+              <h3>
+                Horímetro / KM
+              </h3>
+
+              <p
+                style={{
+                  fontSize:
+                    "22px",
+                  color:
+                    "white",
+                  fontWeight:
+                    "bold",
+                }}
+              >
+                {
+                  equipamentoSelecionado.horimetro ||
+                  "-"
+                }
+              </p>
+
+            </div>
+
+            <div className="card-premium">
+
+              <h3>
+                Próxima Revisão
+              </h3>
+
+              <p
+                style={{
+                  fontSize:
+                    "20px",
+                  color:
+                    emAlerta
+                      ? "#ff7777"
+                      : "white",
+                  fontWeight:
+                    "bold",
+                }}
+              >
+                {
+                  formatarData(
+                    equipamentoSelecionado.proxima_manutencao
+                  )
+                }
+
+                {emAlerta &&
+                  " ⚠️"}
+
+              </p>
+
+            </div>
+
+            <div className="card-premium">
+
+              <h3>
+                Total de Manutenções
+              </h3>
+
+              <p
+                style={{
+                  fontSize:
+                    "22px",
+                  color:
+                    "white",
+                  fontWeight:
+                    "bold",
+                }}
+              >
+                {
+                  historico.length
+                }
+              </p>
+
+            </div>
+
+          </div>
+
+          {/* =================================================
+              HISTÓRICO REAL DO SUPABASE
+          ================================================= */}
+
+          <div className="formulario-maquina">
+
+            <div
+              style={{
+                display:
+                  "flex",
+                justifyContent:
+                  "space-between",
+                alignItems:
+                  "center",
+                gap:
+                  "15px",
+                flexWrap:
+                  "wrap",
+                marginBottom:
+                  "15px",
+              }}
+            >
+
+              <div>
+
+                <h2>
+                  📋 Histórico de Manutenções e Ocorrências
+                </h2>
+
+                <p
+                  style={{
+                    color:
+                      "#8e9bab",
+                    marginTop:
+                      "5px",
+                  }}
+                >
+                  Histórico vinculado
+                  diretamente pelo ID
+                  do equipamento.
+                </p>
+
+              </div>
+
+              <button
+                className="btn-salvar"
+                onClick={() =>
+                  abrirRelatorio(
+                    equipamentoSelecionado
+                  )
+                }
+              >
+                📊 Ver Relatório Completo
+              </button>
+
+            </div>
+
+            <div className="tabela-container">
+
+              <table>
+
+                <thead>
+
+                  <tr>
+
+                    <th>
+                      Data
+                    </th>
+
+                    <th>
+                      Tipo
+                    </th>
+
+                    <th>
+                      Serviços
+                    </th>
+
+                    <th>
+                      Mecânico
+                    </th>
+
+                    <th>
+                      Horímetro
+                    </th>
+
+                    <th>
+                      Prioridade
+                    </th>
+
+                    <th>
+                      Status
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+                <tbody>
+
+                  {historico.length >
+                  0 ? (
+
+                    historico.map(
+                      (
+                        manutencao
+                      ) => (
+
+                        <tr
+                          key={
+                            manutencao.id
+                          }
+                        >
+
+                          <td>
+                            {
+                              formatarData(
+                                manutencao.data
+                              )
+                            }
+                          </td>
+
+                          <td>
+                            {
+                              manutencao.tipo ||
+                              "-"
+                            }
+                          </td>
+
+                          <td>
+
+                            {Array.isArray(
+                              manutencao.servicos
+                            )
+                              ? manutencao.servicos
+                                  .length
+                              : 0}{" "}
+                            serviço(s)
+
+                          </td>
+
+                          <td>
+                            {
+                              manutencao.mecanico ||
+                              "-"
+                            }
+                          </td>
+
+                          <td>
+                            {
+                              manutencao.horimetro ||
+                              "-"
+                            }
+                          </td>
+
+                          <td>
+                            {
+                              manutencao.prioridade ||
+                              "-"
+                            }
+                          </td>
+
+                          <td>
+                            {
+                              manutencao.status ||
+                              "-"
+                            }
+                          </td>
+
+                        </tr>
+
+                      )
+                    )
+
+                  ) : (
+
+                    <tr>
+
+                      <td
+                        colSpan={
+                          7
+                        }
+                        style={{
+                          textAlign:
+                            "center",
+                          color:
+                            "#8e9bab",
+                          padding:
+                            "40px",
+                        }}
+                      >
+
+                        <h3>
+                          Nenhuma manutenção registrada
+                        </h3>
+
+                        <p
+                          style={{
+                            marginTop:
+                              "8px",
+                          }}
+                        >
+                          Este equipamento
+                          ainda não possui
+                          manutenção vinculada
+                          ao ID{" "}
+                          <strong>
+                            {
+                              equipamentoSelecionado.id
+                            }
+                          </strong>
+                          .
+
+                        </p>
+
+                      </td>
+
+                    </tr>
+
+                  )}
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+          {/* =================================================
+              DETALHAMENTO DOS SERVIÇOS
+          ================================================= */}
+
+          {historico.length >
+            0 && (
+
+            <div
+              className="formulario-maquina"
+              style={{
+                marginTop:
+                  "25px",
+              }}
+            >
+
+              <h2>
+                🔧 Detalhamento dos Serviços
+              </h2>
+
+              {historico.map(
+                (
+                  manutencao
+                ) => (
+
+                  <div
+                    className="manutencao"
+                    key={
+                      `detalhe-${manutencao.id}`
+                    }
+                    style={{
+                      marginTop:
+                        "20px",
+                    }}
+                  >
+
+                    <div className="manutencao-topo">
+
+                      <div>
+
+                        <h3>
+                          🔧{" "}
+                          {
+                            manutencao.tipo ||
+                            "Manutenção"
+                          }
+                        </h3>
+
+                        <p>
+                          Data:{" "}
+                          {
+                            formatarData(
+                              manutencao.data
+                            )
+                          }
+                        </p>
+
+                      </div>
+
+                      <strong>
+                        {
+                          manutencao.horimetro ||
+                          "-"
+                        }
+                      </strong>
+
+                    </div>
+
+                    {Array.isArray(
+                      manutencao.servicos
+                    ) &&
+                      manutencao.servicos.map(
+                        (
+                          servico,
+                          index
+                        ) => (
+
+                          <div
+                            key={
+                              servico.id ??
+                              index
+                            }
+                            style={{
+                              marginTop:
+                                "15px",
+                              padding:
+                                "15px",
+                              border:
+                                "1px solid rgba(255,255,255,.1)",
+                              borderRadius:
+                                "10px",
+                            }}
+                          >
+
+                            <h4>
+                              Serviço{" "}
+                              {index +
+                                1}
+                            </h4>
+
+                            <p
+                              style={{
+                                marginTop:
+                                  "8px",
+                                whiteSpace:
+                                  "pre-wrap",
+                              }}
+                            >
+                              {
+                                servico.descricao ||
+                                "Sem descrição"
+                              }
+                            </p>
+
+                            {Array.isArray(
+                              servico.fotos
+                            ) &&
+                              servico.fotos
+                                .length >
+                                0 && (
+
+                                <div
+                                  className="fotos-grid"
+                                  style={{
+                                    marginTop:
+                                      "15px",
+                                  }}
+                                >
+
+                                  {servico.fotos.map(
+                                    (
+                                      foto,
+                                      fotoIndex
+                                    ) => (
+
+                                      <div
+                                        className="foto-card"
+                                        key={
+                                          foto.id ??
+                                          fotoIndex
+                                        }
+                                      >
+
+                                        {foto.imagem && (
+                                          <img
+                                            src={
+                                              foto.imagem
+                                            }
+                                            alt={
+                                              foto.descricao ||
+                                              "Foto do serviço"
+                                            }
+                                          />
+                                        )}
+
+                                        <p>
+                                          {
+                                            foto.descricao ||
+                                            "Sem descrição"
+                                          }
+                                        </p>
+
+                                      </div>
+
+                                    )
+                                  )}
+
+                                </div>
+
+                              )}
+
+                          </div>
+
+                        )
+                      )}
+
+                  </div>
+
+                )
+              )}
+
+            </div>
+
+          )}
+
+        </div>
+
+      </main>
+    );
+  }
+
+  /*
+   * =====================================================
+   * LISTA DE EQUIPAMENTOS
+   * =====================================================
+   */
+
+  return (
+    <main className="Robert-app">
+
+      <div className="page-container">
+
+        <Link
+          href="/"
+          className="voltar"
+        >
+          ← Voltar à Visão Geral do Sistema
+        </Link>
+
+        <header className="page-header">
+
+          <div>
+
+            <h1>
+              🚜 Equipamentos
+            </h1>
+
+            <p>
+              Gerenciamento completo da
+              frota sincronizado na nuvem.
+            </p>
+
+          </div>
+
+          <button
+            className="btn-novo"
+            onClick={() => {
+
+              if (
+                mostrarCadastro
+              ) {
+                limparFormulario();
+              } else {
+                setMostrarCadastro(
+                  true
+                );
+              }
+
+            }}
+          >
+            {mostrarCadastro
+              ? "Cancelar"
+              : "+ Novo Equipamento"}
+          </button>
+
+        </header>
+
+        {/* =================================================
+            FORMULÁRIO
+        ================================================= */}
+
+        {mostrarCadastro && (
+
+          <div className="formulario-maquina">
+
+            <h2>
+              {editando
+                ? "Editar Equipamento"
+                : "Cadastro de Novo Equipamento"}
+            </h2>
+
+            <div className="form-grid">
+
+              <input
+                value={nome}
+                onChange={(e) =>
+                  setNome(
+                    e.target.value
+                  )
+                }
+                placeholder="Nome/Identificação (Ex: Escavadeira 01)"
+              />
+
+              <input
+                value={modelo}
+                onChange={(e) =>
+                  setModelo(
+                    e.target.value
+                  )
+                }
+                placeholder="Modelo (Ex: R160LC-9S)"
+              />
+
+              <input
+                value={
+                  fabricante
+                }
+                onChange={(e) =>
+                  setFabricante(
+                    e.target.value
+                  )
+                }
+                placeholder="Fabricante (Ex: Hyundai)"
+              />
+
+              <input
+                value={ano}
+                onChange={(e) =>
+                  setAno(
+                    e.target.value
+                  )
+                }
+                placeholder="Ano (Ex: 2020)"
+              />
+
+              <input
+                value={
+                  horimetro
+                }
+                onChange={(e) =>
+                  setHorimetro(
+                    e.target.value
+                  )
+                }
+                placeholder="Horímetro ou KM (Ex: 8500 h)"
+              />
+
+              <input
+                value={
+                  responsavel
+                }
+                onChange={(e) =>
+                  setResponsavel(
+                    e.target.value
+                  )
+                }
+                placeholder="Responsável"
+              />
+
+              <input
+                value={
+                  localizacao
+                }
+                onChange={(e) =>
+                  setLocalizacao(
+                    e.target.value
+                  )
+                }
+                placeholder="Localização (Ex: Obra Indaiatuba)"
+              />
+
+              <div
+                style={{
+                  display:
+                    "flex",
+                  flexDirection:
+                    "column",
+                  gap:
+                    "4px",
+                }}
+              >
+
+                <label
+                  style={{
+                    fontSize:
+                      "12px",
+                    color:
+                      "#aeb8c6",
+                  }}
+                >
+                  Próxima Revisão / Manutenção
+                </label>
+
+                <input
+                  type="date"
+                  value={
+                    proximaManutencao
+                  }
+                  onChange={(e) =>
+                    setProximaManutencao(
+                      e.target.value
+                    )
+                  }
+                />
+
+              </div>
+
+              <select
+                value={
+                  status
+                }
+                onChange={(e) =>
+                  setStatus(
+                    e.target.value
+                  )
+                }
+              >
+
+                <option value="Operando">
+                  Operando
+                </option>
+
+                <option value="Em Manutenção">
+                  Em Manutenção
+                </option>
+
+                <option value="Parada">
+                  Parada
+                </option>
+
+              </select>
+
+            </div>
+
+            <div className="form-botoes">
+
+              <button
+                className="btn-cancelar"
+                onClick={
+                  limparFormulario
+                }
+              >
+                Cancelar
+              </button>
+
+              <button
+                className="btn-salvar"
+                onClick={
+                  salvarCadastro
+                }
+              >
+                {editando
+                  ? "Salvar Alterações"
+                  : "Salvar Equipamento"}
+              </button>
+
+            </div>
+
+          </div>
+
+        )}
+
+        {/* =================================================
+            BUSCA
+        ================================================= */}
+
+        <input
+          className="busca-container"
+          placeholder="Buscar equipamento por nome, modelo, fabricante ou localização..."
+          value={
+            filtroBusca
+          }
+          onChange={(e) =>
+            setFiltroBusca(
+              e.target.value
+            )
+          }
+        />
+
+        {/* =================================================
+            TABELA
+        ================================================= */}
+
+        <div className="tabela-container">
+
+          {carregando ? (
+
+            <p
+              style={{
+                padding:
+                  "40px",
+                textAlign:
+                  "center",
+              }}
+            >
+              Carregando equipamentos...
+            </p>
+
+          ) : (
+
+            <table>
+
+              <thead>
+
+                <tr>
+
+                  <th>
+                    Equipamento
+                  </th>
+
+                  <th>
+                    Modelo
+                  </th>
+
+                  <th>
+                    Localização
+                  </th>
+
+                  <th>
+                    Próxima Revisão
+                  </th>
+
+                  <th>
+                    Horímetro / KM
+                  </th>
+
+                  <th>
+                    Manutenções
+                  </th>
+
+                  <th>
+                    Status
+                  </th>
+
+                  <th>
+                    Ações
+                  </th>
+
+                </tr>
+
+              </thead>
+
+              <tbody>
+
+                {filtrados.map(
+                  (eq) => {
+
+                    const emAlerta =
+                      verificarAlertaManutencao(
+                        eq.proxima_manutencao
+                      );
+
+                    const totalManutencoes =
+                      historicoDaMaquina(
+                        eq.id
+                      ).length;
+
+                    return (
+
+                      <tr
+                        key={
+                          eq.id
+                        }
+                        style={
+                          emAlerta
+                            ? {
+                                background:
+                                  "rgba(255, 70, 70, 0.08)",
+                              }
+                            : {}
+                        }
+                      >
+
+                        <td>
+                          🚜{" "}
+                          {eq.nome}
+                        </td>
+
+                        <td>
+                          {
+                            eq.modelo
+                          }
+                        </td>
+
+                        <td>
+                          📍{" "}
+                          {
+                            eq.localizacao ||
+                            "Não informada"
+                          }
+                        </td>
+
+                        <td>
+
+                          <span
+                            style={
+                              emAlerta
+                                ? {
+                                    color:
+                                      "#ff7777",
+                                    fontWeight:
+                                      "bold",
+                                  }
+                                : {}
+                            }
+                          >
+
+                            {
+                              formatarData(
+                                eq.proxima_manutencao
+                              )
+                            }
+
+                            {emAlerta &&
+                              " ⚠️"}
+
+                          </span>
+
+                        </td>
+
+                        <td>
+                          {
+                            eq.horimetro ||
+                            "-"
+                          }
+                        </td>
+
+                        <td>
+
+                          <strong>
+                            {
+                              totalManutencoes
+                            }
+                          </strong>
+
+                          {" "}
+                          registro(s)
+
+                        </td>
+
+                        <td>
+
+                          <span
+                            className={
+                              eq.status ===
+                              "Operando"
+                                ? "status-operando"
+                                : eq.status ===
+                                  "Em Manutenção"
+                                ? "status-manutencao"
+                                : "status-parada"
+                            }
+                          >
+                            {
+                              eq.status
+                            }
+                          </span>
+
+                        </td>
+
+                        <td>
+
+                          <div
+                            style={{
+                              display:
+                                "flex",
+                              gap:
+                                "6px",
+                              flexWrap:
+                                "wrap",
+                            }}
+                          >
+
+                            <button
+                              className="btn-editar"
+                              onClick={() =>
+                                abrirEquipamento(
+                                  eq
+                                )
+                              }
+                              title="Visualizar"
+                            >
+                              👁
+                            </button>
+
+                            <button
+                              className="btn-editar"
+                              onClick={() =>
+                                iniciarEdicao(
+                                  eq
+                                )
+                              }
+                              title="Editar"
+                            >
+                              ✏️
+                            </button>
+
+                            <button
+                              className="btn-editar"
+                              onClick={() =>
+                                abrirRelatorio(
+                                  eq
+                                )
+                              }
+                              title="Relatório"
+                            >
+                              📊
+                            </button>
+
+                            <button
+                              className="btn-excluir"
+                              onClick={() =>
+                                excluirEquipamento(
+                                  eq.id
+                                )
+                              }
+                              title="Excluir"
+                            >
+                              🗑
+                            </button>
+
+                          </div>
+
+                        </td>
+
+                      </tr>
+
+                    );
+                  }
+                )}
+
+                {filtrados.length ===
+                  0 && (
+
+                  <tr>
+
+                    <td
+                      colSpan={
+                        8
+                      }
+                      style={{
+                        textAlign:
+                          "center",
+                        padding:
+                          "30px",
+                        color:
+                          "#8e9bab",
+                      }}
+                    >
+                      Nenhum equipamento
+                      encontrado na nuvem.
+                    </td>
+
+                  </tr>
+
+                )}
+
+              </tbody>
+
+            </table>
+
+          )}
+
+        </div>
+
+      </div>
+
+    </main>
+  );
+}
