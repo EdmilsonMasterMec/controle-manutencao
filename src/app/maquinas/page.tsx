@@ -26,7 +26,6 @@ type Equipamento = {
   status: string;
   proxima_manutencao: string | null;
 
-  // Campos antigos da tabela, caso ainda existam
   nome?: string;
   responsavel?: string;
   localizacao?: string;
@@ -35,6 +34,7 @@ type Equipamento = {
 
 type Manutencao = {
   id: number;
+  equipamento_id: number | null;
   maquina: string;
   tipo: string;
   mecanico: string;
@@ -43,6 +43,27 @@ type Manutencao = {
   prioridade: string;
   status: string;
   servicos?: unknown[];
+};
+
+type FotoServico = {
+  imagem?: string;
+  url?: string;
+  foto?: string;
+  src?: string;
+  descricao?: string;
+  legenda?: string;
+  nome?: string;
+};
+
+type Servico = {
+  descricao?: string;
+  servico?: string;
+  nome?: string;
+  texto?: string;
+  fotos?: unknown[];
+  foto?: string;
+  imagem?: string;
+  url?: string;
 };
 
 type FormEquipamento = {
@@ -71,20 +92,187 @@ const formInicial: FormEquipamento = {
   proxima_manutencao: "",
 };
 
+/* =========================================================
+   FUNÇÕES AUXILIARES
+========================================================= */
+
+function textoSeguro(valor: unknown): string {
+  if (valor === null || valor === undefined) {
+    return "";
+  }
+
+  return String(valor);
+}
+
+function escaparHtml(valor: unknown): string {
+  return textoSeguro(valor)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function objeto(valor: unknown): Record<string, unknown> | null {
+  if (
+    typeof valor === "object" &&
+    valor !== null &&
+    !Array.isArray(valor)
+  ) {
+    return valor as Record<string, unknown>;
+  }
+
+  return null;
+}
+
+function extrairTextoServico(servico: unknown): string {
+  if (typeof servico === "string") {
+    return servico;
+  }
+
+  const item = objeto(servico);
+
+  if (!item) {
+    return "";
+  }
+
+  const possiveis = [
+    item.descricao,
+    item.servico,
+    item.nome,
+    item.texto,
+    item.descricao_servico,
+    item.descricaoServico,
+  ];
+
+  for (const valor of possiveis) {
+    if (
+      typeof valor === "string" &&
+      valor.trim()
+    ) {
+      return valor.trim();
+    }
+  }
+
+  return "";
+}
+
+function extrairFotosServico(
+  servico: unknown
+): FotoServico[] {
+  const resultado: FotoServico[] = [];
+
+  const item = objeto(servico);
+
+  if (!item) {
+    return resultado;
+  }
+
+  const adicionarFoto = (foto: unknown) => {
+    if (!foto) return;
+
+    if (typeof foto === "string") {
+      if (foto.trim()) {
+        resultado.push({
+          imagem: foto.trim(),
+        });
+      }
+
+      return;
+    }
+
+    const obj = objeto(foto);
+
+    if (!obj) return;
+
+    const imagem =
+      typeof obj.imagem === "string"
+        ? obj.imagem
+        : typeof obj.url === "string"
+        ? obj.url
+        : typeof obj.foto === "string"
+        ? obj.foto
+        : typeof obj.src === "string"
+        ? obj.src
+        : "";
+
+    if (!imagem) return;
+
+    resultado.push({
+      imagem,
+      descricao:
+        typeof obj.descricao === "string"
+          ? obj.descricao
+          : typeof obj.legenda === "string"
+          ? obj.legenda
+          : typeof obj.nome === "string"
+          ? obj.nome
+          : "",
+    });
+  };
+
+  if (Array.isArray(item.fotos)) {
+    item.fotos.forEach(adicionarFoto);
+  }
+
+  adicionarFoto(item.foto);
+  adicionarFoto(item.imagem);
+  adicionarFoto(item.url);
+
+  return resultado;
+}
+
+function obterServicos(
+  manutencao: Manutencao
+): Servico[] {
+  if (!Array.isArray(manutencao.servicos)) {
+    return [];
+  }
+
+  return manutencao.servicos as Servico[];
+}
+
+function obterTodasFotos(
+  manutencao: Manutencao
+): FotoServico[] {
+  const fotos: FotoServico[] = [];
+
+  for (const servico of obterServicos(manutencao)) {
+    fotos.push(...extrairFotosServico(servico));
+  }
+
+  return fotos;
+}
+
+/* =========================================================
+   PÁGINA
+========================================================= */
+
 export default function EquipamentosPage() {
-  const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
-  const [manutencoes, setManutencoes] = useState<Manutencao[]>([]);
+  const [equipamentos, setEquipamentos] = useState<
+    Equipamento[]
+  >([]);
+
+  const [manutencoes, setManutencoes] = useState<
+    Manutencao[]
+  >([]);
 
   const [busca, setBusca] = useState("");
   const [carregando, setCarregando] = useState(true);
 
-  const [mostrarCadastro, setMostrarCadastro] = useState(false);
-  const [equipamentoSelecionado, setEquipamentoSelecionado] =
-    useState<Equipamento | null>(null);
+  const [mostrarCadastro, setMostrarCadastro] =
+    useState(false);
 
-  const [editandoId, setEditandoId] = useState<number | null>(null);
+  const [
+    equipamentoSelecionado,
+    setEquipamentoSelecionado,
+  ] = useState<Equipamento | null>(null);
 
-  const [form, setForm] = useState<FormEquipamento>(formInicial);
+  const [editandoId, setEditandoId] =
+    useState<number | null>(null);
+
+  const [form, setForm] =
+    useState<FormEquipamento>(formInicial);
 
   useEffect(() => {
     carregarDados();
@@ -119,17 +307,22 @@ export default function EquipamentosPage() {
       .select("*")
       .order("id", { ascending: false });
 
-    const [equipamentosResult, manutencoesResult] = await Promise.all([
+    const [
+      equipamentosResult,
+      manutencoesResult,
+    ] = await Promise.all([
       equipamentosPromise,
       manutencoesPromise,
     ]);
 
     if (equipamentosResult.error) {
       console.error(equipamentosResult.error);
+
       alert(
         "Erro ao carregar os equipamentos:\n\n" +
           equipamentosResult.error.message
       );
+
       setCarregando(false);
       return;
     }
@@ -142,11 +335,13 @@ export default function EquipamentosPage() {
     }
 
     setEquipamentos(
-      (equipamentosResult.data || []) as Equipamento[]
+      (equipamentosResult.data ||
+        []) as Equipamento[]
     );
 
     setManutencoes(
-      (manutencoesResult.data || []) as Manutencao[]
+      (manutencoesResult.data ||
+        []) as Manutencao[]
     );
 
     setCarregando(false);
@@ -159,23 +354,41 @@ export default function EquipamentosPage() {
     setEquipamentoSelecionado(null);
   }
 
-  function editarEquipamento(equipamento: Equipamento) {
+  function editarEquipamento(
+    equipamento: Equipamento
+  ) {
     setEditandoId(equipamento.id);
 
     setForm({
-      categoria: equipamento.categoria || "Máquina",
+      categoria:
+        equipamento.categoria || "Máquina",
+
       descricao_bem:
         equipamento.descricao_bem ||
         equipamento.nome ||
         "",
-      fabricante: equipamento.fabricante || "",
-      modelo: equipamento.modelo || "",
-      ano: equipamento.ano || "",
+
+      fabricante:
+        equipamento.fabricante || "",
+
+      modelo:
+        equipamento.modelo || "",
+
+      ano:
+        equipamento.ano || "",
+
       numero_serie_chassi:
         equipamento.numero_serie_chassi || "",
-      placa: equipamento.placa || "",
-      horimetro: equipamento.horimetro || "",
-      status: equipamento.status || "Operando",
+
+      placa:
+        equipamento.placa || "",
+
+      horimetro:
+        equipamento.horimetro || "",
+
+      status:
+        equipamento.status || "Operando",
+
       proxima_manutencao:
         equipamento.proxima_manutencao || "",
     });
@@ -192,20 +405,36 @@ export default function EquipamentosPage() {
 
     const dados = {
       categoria: form.categoria.trim(),
-      descricao_bem: form.descricao_bem.trim(),
-      fabricante: form.fabricante.trim(),
-      modelo: form.modelo.trim(),
-      ano: form.ano.trim(),
+
+      descricao_bem:
+        form.descricao_bem.trim(),
+
+      fabricante:
+        form.fabricante.trim(),
+
+      modelo:
+        form.modelo.trim(),
+
+      ano:
+        form.ano.trim(),
+
       numero_serie_chassi:
         form.numero_serie_chassi.trim(),
-      placa: form.placa.trim(),
-      horimetro: form.horimetro.trim(),
-      status: form.status,
+
+      placa:
+        form.placa.trim(),
+
+      horimetro:
+        form.horimetro.trim(),
+
+      status:
+        form.status,
+
       proxima_manutencao:
         form.proxima_manutencao || null,
 
-      // Mantém compatibilidade com o campo antigo
-      nome: form.descricao_bem.trim(),
+      nome:
+        form.descricao_bem.trim(),
     };
 
     if (editandoId !== null) {
@@ -216,14 +445,18 @@ export default function EquipamentosPage() {
 
       if (error) {
         console.error(error);
+
         alert(
           "Erro ao atualizar equipamento:\n\n" +
             error.message
         );
+
         return;
       }
 
-      alert("Equipamento atualizado com sucesso.");
+      alert(
+        "Equipamento atualizado com sucesso."
+      );
     } else {
       const { error } = await supabase
         .from("equipamentos")
@@ -234,14 +467,18 @@ export default function EquipamentosPage() {
 
       if (error) {
         console.error(error);
+
         alert(
           "Erro ao cadastrar equipamento:\n\n" +
             error.message
         );
+
         return;
       }
 
-      alert("Equipamento cadastrado com sucesso.");
+      alert(
+        "Equipamento cadastrado com sucesso."
+      );
     }
 
     setMostrarCadastro(false);
@@ -251,10 +488,13 @@ export default function EquipamentosPage() {
     await carregarDados();
   }
 
-  async function excluirEquipamento(id: number) {
-    const equipamento = equipamentos.find(
-      (item) => item.id === id
-    );
+  async function excluirEquipamento(
+    id: number
+  ) {
+    const equipamento =
+      equipamentos.find(
+        (item) => item.id === id
+      );
 
     if (!equipamento) return;
 
@@ -289,31 +529,38 @@ export default function EquipamentosPage() {
   }
 
   const equipamentosFiltrados = useMemo(() => {
-    const texto = busca.trim().toLowerCase();
+    const texto =
+      busca.trim().toLowerCase();
 
-    if (!texto) return equipamentos;
+    if (!texto) {
+      return equipamentos;
+    }
 
-    return equipamentos.filter((equipamento) => {
-      const dados = [
-        equipamento.categoria,
-        equipamento.descricao_bem,
-        equipamento.fabricante,
-        equipamento.modelo,
-        equipamento.ano,
-        equipamento.numero_serie_chassi,
-        equipamento.placa,
-        equipamento.horimetro,
-        equipamento.status,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
+    return equipamentos.filter(
+      (equipamento) => {
+        const dados = [
+          equipamento.categoria,
+          equipamento.descricao_bem,
+          equipamento.fabricante,
+          equipamento.modelo,
+          equipamento.ano,
+          equipamento.numero_serie_chassi,
+          equipamento.placa,
+          equipamento.horimetro,
+          equipamento.status,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
 
-      return dados.includes(texto);
-    });
+        return dados.includes(texto);
+      }
+    );
   }, [equipamentos, busca]);
 
-  function formatarData(data?: string | null) {
+  function formatarData(
+    data?: string | null
+  ) {
     if (!data) return "-";
 
     const partes = data.split("-");
@@ -325,37 +572,36 @@ export default function EquipamentosPage() {
     return data;
   }
 
+  /* =======================================================
+     VÍNCULO OFICIAL DA MANUTENÇÃO
+     
+     Agora usamos equipamento_id.
+     
+     Não usamos mais o texto "maquina" para localizar
+     a manutenção.
+  ======================================================= */
+
   function manutencoesDoEquipamento(
     equipamento: Equipamento
   ) {
-    const identificadores = [
-      equipamento.descricao_bem,
-      equipamento.nome,
-      `${equipamento.fabricante} ${equipamento.modelo}`,
-      equipamento.numero_serie_chassi,
-      equipamento.placa,
-    ]
-      .filter(Boolean)
-      .map((valor) =>
-        String(valor).trim().toLowerCase()
-      );
-
-    return manutencoes.filter((manutencao) => {
-      const maquina = String(
-        manutencao.maquina || ""
-      )
-        .trim()
-        .toLowerCase();
-
-      return identificadores.includes(maquina);
-    });
+    return manutencoes.filter(
+      (manutencao) =>
+        Number(manutencao.equipamento_id) ===
+        Number(equipamento.id)
+    );
   }
+
+  /* =======================================================
+     IMPRESSÃO
+  ======================================================= */
 
   function imprimirEquipamento(
     equipamento: Equipamento
   ) {
     const historico =
-      manutencoesDoEquipamento(equipamento);
+      manutencoesDoEquipamento(
+        equipamento
+      );
 
     const janela = window.open(
       "",
@@ -366,87 +612,271 @@ export default function EquipamentosPage() {
       alert(
         "Permita pop-ups no navegador para imprimir."
       );
+
       return;
     }
 
     const dataEmissao =
-      new Date().toLocaleString("pt-BR");
+      new Date().toLocaleString(
+        "pt-BR"
+      );
 
     const historicoHtml =
       historico.length > 0
         ? historico
             .map(
-              (manutencao, index) => `
-                <div class="manutencao">
-                  <h3>Manutenção ${index + 1}</h3>
+              (
+                manutencao,
+                index
+              ) => {
+                const servicos =
+                  obterServicos(
+                    manutencao
+                  );
 
-                  <div class="grid">
+                const quantidadeFotos =
+                  obterTodasFotos(
+                    manutencao
+                  ).length;
 
-                    <div>
-                      <strong>Data</strong>
-                      <span>
-                        ${formatarData(
-                          manutencao.data
-                        )}
-                      </span>
+                const servicosHtml =
+                  servicos.length > 0
+                    ? `
+                      <div class="servicos">
+                        <h4>
+                          Serviços executados
+                        </h4>
+
+                        ${servicos
+                          .map(
+                            (
+                              servico,
+                              servicoIndex
+                            ) => {
+                              const descricao =
+                                extrairTextoServico(
+                                  servico
+                                );
+
+                              const fotos =
+                                extrairFotosServico(
+                                  servico
+                                );
+
+                              return `
+                                <div class="servico">
+
+                                  <div class="servico-titulo">
+                                    Serviço ${
+                                      servicoIndex +
+                                      1
+                                    }
+                                  </div>
+
+                                  <div class="servico-descricao">
+                                    ${
+                                      escaparHtml(
+                                        descricao
+                                      ) ||
+                                      "Serviço registrado."
+                                    }
+                                  </div>
+
+                                  ${
+                                    fotos.length >
+                                    0
+                                      ? `
+                                        <div class="fotos-titulo">
+                                          Fotos do serviço
+                                        </div>
+
+                                        <div class="fotos-grid">
+                                          ${fotos
+                                            .map(
+                                              (
+                                                foto,
+                                                fotoIndex
+                                              ) => `
+                                                <div class="foto-item">
+
+                                                  <img
+                                                    src="${escaparHtml(
+                                                      foto.imagem
+                                                    )}"
+                                                    alt="Foto ${
+                                                      fotoIndex +
+                                                      1
+                                                    } do serviço"
+                                                  />
+
+                                                  ${
+                                                    foto.descricao
+                                                      ? `
+                                                        <div class="foto-descricao">
+                                                          ${escaparHtml(
+                                                            foto.descricao
+                                                          )}
+                                                        </div>
+                                                      `
+                                                      : ""
+                                                  }
+
+                                                </div>
+                                              `
+                                            )
+                                            .join(
+                                              ""
+                                            )}
+                                        </div>
+                                      `
+                                      : ""
+                                  }
+
+                                </div>
+                              `;
+                            }
+                          )
+                          .join("")}
+                      </div>
+                    `
+                    : `
+                      <div class="sem-servicos">
+                        Nenhum serviço detalhado
+                        registrado nesta manutenção.
+                      </div>
+                    `;
+
+                return `
+                  <div class="manutencao">
+
+                    <h3>
+                      Manutenção ${
+                        index + 1
+                      }
+                    </h3>
+
+                    <div class="grid">
+
+                      <div>
+                        <strong>Data</strong>
+                        <span>
+                          ${escaparHtml(
+                            formatarData(
+                              manutencao.data
+                            )
+                          )}
+                        </span>
+                      </div>
+
+                      <div>
+                        <strong>Tipo</strong>
+                        <span>
+                          ${escaparHtml(
+                            manutencao.tipo ||
+                              "-"
+                          )}
+                        </span>
+                      </div>
+
+                      <div>
+                        <strong>Mecânico</strong>
+                        <span>
+                          ${escaparHtml(
+                            manutencao.mecanico ||
+                              "-"
+                          )}
+                        </span>
+                      </div>
+
+                      <div>
+                        <strong>Horímetro</strong>
+                        <span>
+                          ${escaparHtml(
+                            manutencao.horimetro ||
+                              "-"
+                          )}
+                        </span>
+                      </div>
+
+                      <div>
+                        <strong>Prioridade</strong>
+                        <span>
+                          ${escaparHtml(
+                            manutencao.prioridade ||
+                              "-"
+                          )}
+                        </span>
+                      </div>
+
+                      <div>
+                        <strong>Status</strong>
+                        <span>
+                          ${escaparHtml(
+                            manutencao.status ||
+                              "-"
+                          )}
+                        </span>
+                      </div>
+
                     </div>
 
-                    <div>
-                      <strong>Tipo</strong>
-                      <span>
-                        ${manutencao.tipo || "-"}
-                      </span>
-                    </div>
+                    ${servicosHtml}
 
-                    <div>
-                      <strong>Mecânico</strong>
-                      <span>
-                        ${manutencao.mecanico || "-"}
-                      </span>
-                    </div>
-
-                    <div>
-                      <strong>Horímetro</strong>
-                      <span>
-                        ${manutencao.horimetro || "-"}
-                      </span>
-                    </div>
-
-                    <div>
-                      <strong>Prioridade</strong>
-                      <span>
-                        ${manutencao.prioridade || "-"}
-                      </span>
-                    </div>
-
-                    <div>
-                      <strong>Status</strong>
-                      <span>
-                        ${manutencao.status || "-"}
-                      </span>
-                    </div>
+                    ${
+                      quantidadeFotos > 0
+                        ? `
+                          <div class="contador-fotos">
+                            ${quantidadeFotos}
+                            ${
+                              quantidadeFotos ===
+                              1
+                                ? "foto"
+                                : "fotos"
+                            } anexada${
+                              quantidadeFotos ===
+                              1
+                                ? ""
+                                : "s"
+                            }
+                          </div>
+                        `
+                        : ""
+                    }
 
                   </div>
-                </div>
-              `
+                `;
+              }
             )
             .join("")
         : `
             <div class="sem-historico">
-              Nenhuma manutenção registrada para este equipamento.
+              Nenhuma manutenção registrada
+              para este equipamento.
             </div>
           `;
 
     janela.document.write(`
       <!DOCTYPE html>
+
       <html lang="pt-BR">
 
       <head>
+
         <meta charset="UTF-8" />
 
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1.0"
+        />
+
         <title>
-          Relatório - ${equipamento.fabricante}
-          ${equipamento.modelo}
+          Relatório -
+          ${escaparHtml(
+            equipamento.fabricante
+          )}
+          ${escaparHtml(
+            equipamento.modelo
+          )}
         </title>
 
         <style>
@@ -456,15 +886,24 @@ export default function EquipamentosPage() {
           }
 
           body {
-            font-family: Arial, Helvetica, sans-serif;
+            font-family:
+              Arial,
+              Helvetica,
+              sans-serif;
+
             margin: 0;
             padding: 30px;
+
             color: #111;
             background: white;
+
+            font-size: 13px;
           }
 
           .cabecalho {
-            border-bottom: 3px solid #222;
+            border-bottom:
+              3px solid #222;
+
             padding-bottom: 15px;
             margin-bottom: 25px;
           }
@@ -476,26 +915,38 @@ export default function EquipamentosPage() {
 
           .cabecalho p {
             margin: 6px 0 0;
+            color: #555;
           }
 
           .dados {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+
+            grid-template-columns:
+              repeat(3, 1fr);
+
             gap: 12px;
+
             margin-bottom: 30px;
           }
 
           .campo {
-            border: 1px solid #ccc;
+            border:
+              1px solid #ccc;
+
             padding: 10px;
+
             border-radius: 5px;
           }
 
           .campo strong {
             display: block;
+
             font-size: 10px;
             color: #555;
-            text-transform: uppercase;
+
+            text-transform:
+              uppercase;
+
             margin-bottom: 5px;
           }
 
@@ -504,39 +955,57 @@ export default function EquipamentosPage() {
           }
 
           .resumo {
-            border: 1px solid #ccc;
+            border:
+              1px solid #ccc;
+
             padding: 15px;
+
             margin-bottom: 25px;
           }
 
           .manutencao {
-            border: 1px solid #bbb;
+            border:
+              1px solid #bbb;
+
             padding: 18px;
-            margin-bottom: 20px;
-            page-break-inside: avoid;
+
+            margin-bottom: 25px;
+
+            page-break-inside:
+              avoid;
           }
 
           .manutencao h3 {
             margin-top: 0;
-            border-bottom: 1px solid #ddd;
+
+            border-bottom:
+              1px solid #ddd;
+
             padding-bottom: 8px;
           }
 
           .grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+
+            grid-template-columns:
+              repeat(3, 1fr);
+
             gap: 10px;
           }
 
           .grid div {
-            border: 1px solid #ddd;
+            border:
+              1px solid #ddd;
+
             padding: 9px;
           }
 
           .grid strong {
             display: block;
+
             font-size: 10px;
             color: #666;
+
             margin-bottom: 4px;
           }
 
@@ -544,34 +1013,208 @@ export default function EquipamentosPage() {
             font-size: 13px;
           }
 
+          .servicos {
+            margin-top: 20px;
+
+            border-top:
+              2px solid #ddd;
+
+            padding-top: 15px;
+          }
+
+          .servicos h4 {
+            margin:
+              0 0 12px 0;
+
+            font-size: 16px;
+          }
+
+          .servico {
+            border:
+              1px solid #ddd;
+
+            border-radius: 7px;
+
+            padding: 12px;
+
+            margin-bottom: 15px;
+
+            page-break-inside:
+              avoid;
+          }
+
+          .servico-titulo {
+            font-weight: bold;
+
+            font-size: 13px;
+
+            margin-bottom: 8px;
+          }
+
+          .servico-descricao {
+            white-space:
+              pre-wrap;
+
+            line-height: 1.5;
+
+            margin-bottom: 12px;
+          }
+
+          .fotos-titulo {
+            font-weight: bold;
+
+            font-size: 12px;
+
+            margin:
+              10px 0;
+          }
+
+          .fotos-grid {
+            display: grid;
+
+            grid-template-columns:
+              repeat(2, 1fr);
+
+            gap: 12px;
+          }
+
+          .foto-item {
+            border:
+              1px solid #ccc;
+
+            border-radius: 6px;
+
+            padding: 7px;
+
+            page-break-inside:
+              avoid;
+
+            background: #fff;
+          }
+
+          .foto-item img {
+            display: block;
+
+            width: 100%;
+
+            max-width: 100%;
+
+            height: auto;
+
+            max-height: 420px;
+
+            object-fit: contain;
+
+            border-radius: 4px;
+
+            background: #f4f4f4;
+          }
+
+          .foto-descricao {
+            font-size: 11px;
+
+            color: #444;
+
+            margin-top: 7px;
+
+            line-height: 1.4;
+          }
+
+          .contador-fotos {
+            margin-top: 12px;
+
+            font-size: 11px;
+
+            color: #666;
+          }
+
+          .sem-servicos {
+            border:
+              1px dashed #ccc;
+
+            padding: 15px;
+
+            margin-top: 15px;
+
+            color: #666;
+          }
+
           .sem-historico {
-            border: 1px solid #ccc;
+            border:
+              1px solid #ccc;
+
             padding: 20px;
+
             text-align: center;
           }
 
           .rodape {
             margin-top: 35px;
-            border-top: 1px solid #ccc;
+
+            border-top:
+              1px solid #ccc;
+
             padding-top: 10px;
+
             font-size: 11px;
+
             color: #666;
           }
 
           @media print {
+
             body {
               padding: 15px;
             }
+
+            .manutencao {
+              page-break-inside:
+                auto;
+            }
+
+            .servico,
+            .foto-item {
+              page-break-inside:
+                avoid;
+            }
+
+            img {
+              print-color-adjust:
+                exact;
+
+              -webkit-print-color-adjust:
+                exact;
+            }
+
+          }
+
+          @media (max-width: 700px) {
+
+            .dados,
+            .grid,
+            .fotos-grid {
+              grid-template-columns:
+                1fr;
+            }
+
           }
 
         </style>
+
       </head>
 
       <body>
 
         <div class="cabecalho">
-          <h1>MasterMec</h1>
-          <p>Gestão de Manutenção de Equipamentos</p>
+
+          <h1>
+            MasterMec
+          </h1>
+
+          <p>
+            Gestão de Manutenção de Equipamentos
+          </p>
+
         </div>
 
         <h2>
@@ -582,54 +1225,101 @@ export default function EquipamentosPage() {
 
           <div class="campo">
             <strong>Categoria</strong>
-            <span>${equipamento.categoria || "-"}</span>
+            <span>
+              ${escaparHtml(
+                equipamento.categoria ||
+                  "-"
+              )}
+            </span>
           </div>
 
           <div class="campo">
             <strong>Descrição do Bem</strong>
-            <span>${equipamento.descricao_bem || "-"}</span>
+            <span>
+              ${escaparHtml(
+                equipamento.descricao_bem ||
+                  "-"
+              )}
+            </span>
           </div>
 
           <div class="campo">
             <strong>Fabricante</strong>
-            <span>${equipamento.fabricante || "-"}</span>
+            <span>
+              ${escaparHtml(
+                equipamento.fabricante ||
+                  "-"
+              )}
+            </span>
           </div>
 
           <div class="campo">
             <strong>Modelo</strong>
-            <span>${equipamento.modelo || "-"}</span>
+            <span>
+              ${escaparHtml(
+                equipamento.modelo ||
+                  "-"
+              )}
+            </span>
           </div>
 
           <div class="campo">
             <strong>Ano Modelo</strong>
-            <span>${equipamento.ano || "-"}</span>
+            <span>
+              ${escaparHtml(
+                equipamento.ano ||
+                  "-"
+              )}
+            </span>
           </div>
 
           <div class="campo">
             <strong>Nº Série / Chassi</strong>
-            <span>${equipamento.numero_serie_chassi || "-"}</span>
+            <span>
+              ${escaparHtml(
+                equipamento.numero_serie_chassi ||
+                  "-"
+              )}
+            </span>
           </div>
 
           <div class="campo">
             <strong>Placa</strong>
-            <span>${equipamento.placa || "-"}</span>
+            <span>
+              ${escaparHtml(
+                equipamento.placa ||
+                  "-"
+              )}
+            </span>
           </div>
 
           <div class="campo">
             <strong>Horímetro</strong>
-            <span>${equipamento.horimetro || "-"}</span>
+            <span>
+              ${escaparHtml(
+                equipamento.horimetro ||
+                  "-"
+              )}
+            </span>
           </div>
 
           <div class="campo">
             <strong>Status</strong>
-            <span>${equipamento.status || "-"}</span>
+            <span>
+              ${escaparHtml(
+                equipamento.status ||
+                  "-"
+              )}
+            </span>
           </div>
 
           <div class="campo">
             <strong>Próxima Manutenção</strong>
             <span>
-              ${formatarData(
-                equipamento.proxima_manutencao
+              ${escaparHtml(
+                formatarData(
+                  equipamento.proxima_manutencao
+                )
               )}
             </span>
           </div>
@@ -637,36 +1327,60 @@ export default function EquipamentosPage() {
         </div>
 
         <div class="resumo">
+
           <strong>
             Total de manutenções:
             ${historico.length}
           </strong>
+
         </div>
 
-        <h2>Histórico de Manutenção</h2>
+        <h2>
+          Histórico de Manutenção
+        </h2>
 
         ${historicoHtml}
 
         <div class="rodape">
-          Relatório emitido em ${dataEmissao}
+
+          Relatório emitido em
+          ${escaparHtml(dataEmissao)}
+
           <br />
-          MasterMec - Gestão de Manutenção de Equipamentos
+
+          MasterMec -
+          Gestão de Manutenção de Equipamentos
+
         </div>
 
         <script>
+
           window.onload = function() {
-            setTimeout(function() {
-              window.print();
-            }, 500);
+
+            setTimeout(
+              function() {
+
+                window.print();
+
+              },
+              800
+            );
+
           };
+
         </script>
 
       </body>
+
       </html>
     `);
 
     janela.document.close();
   }
+
+  /* =======================================================
+     DETALHE DO EQUIPAMENTO
+  ======================================================= */
 
   if (equipamentoSelecionado) {
     const historico =
@@ -676,11 +1390,14 @@ export default function EquipamentosPage() {
 
     return (
       <main className="mastermec-app">
+
         <div style={containerStyle}>
 
           <button
             onClick={() =>
-              setEquipamentoSelecionado(null)
+              setEquipamentoSelecionado(
+                null
+              )
             }
             style={voltarStyle}
           >
@@ -690,14 +1407,26 @@ export default function EquipamentosPage() {
           <div style={topoStyle}>
 
             <div>
+
               <h1 style={{ margin: 0 }}>
-                {equipamentoSelecionado.fabricante}{" "}
-                {equipamentoSelecionado.modelo}
+                {
+                  equipamentoSelecionado.fabricante
+                }{" "}
+                {
+                  equipamentoSelecionado.modelo
+                }
               </h1>
 
-              <p style={{ color: "#666" }}>
-                {equipamentoSelecionado.descricao_bem}
+              <p
+                style={{
+                  color: "#666",
+                }}
+              >
+                {
+                  equipamentoSelecionado.descricao_bem
+                }
               </p>
+
             </div>
 
             <button
@@ -781,69 +1510,297 @@ export default function EquipamentosPage() {
             </h2>
 
             {historico.length === 0 ? (
+
               <p>
                 Nenhuma manutenção registrada
                 para este equipamento.
               </p>
+
             ) : (
-              historico.map((manutencao) => (
-                <div
-                  key={manutencao.id}
-                  style={manutencaoStyle}
-                >
-                  <div style={gridStyle}>
 
-                    <InfoCard
-                      titulo="Data"
-                      valor={formatarData(
-                        manutencao.data
+              historico.map(
+                (manutencao) => {
+
+                  const servicos =
+                    obterServicos(
+                      manutencao
+                    );
+
+                  const fotos =
+                    obterTodasFotos(
+                      manutencao
+                    );
+
+                  return (
+                    <div
+                      key={manutencao.id}
+                      style={manutencaoStyle}
+                    >
+
+                      <div
+                        style={gridStyle}
+                      >
+
+                        <InfoCard
+                          titulo="Data"
+                          valor={formatarData(
+                            manutencao.data
+                          )}
+                        />
+
+                        <InfoCard
+                          titulo="Tipo"
+                          valor={
+                            manutencao.tipo
+                          }
+                        />
+
+                        <InfoCard
+                          titulo="Mecânico"
+                          valor={
+                            manutencao.mecanico
+                          }
+                        />
+
+                        <InfoCard
+                          titulo="Horímetro"
+                          valor={
+                            manutencao.horimetro
+                          }
+                        />
+
+                        <InfoCard
+                          titulo="Prioridade"
+                          valor={
+                            manutencao.prioridade
+                          }
+                        />
+
+                        <InfoCard
+                          titulo="Status"
+                          valor={
+                            manutencao.status
+                          }
+                        />
+
+                      </div>
+
+                      {/* SERVIÇOS */}
+
+                      {servicos.length >
+                        0 && (
+
+                        <div
+                          style={{
+                            marginTop:
+                              "20px",
+                            borderTop:
+                              "1px solid #ddd",
+                            paddingTop:
+                              "15px",
+                          }}
+                        >
+
+                          <h3>
+                            Serviços executados
+                          </h3>
+
+                          {servicos.map(
+                            (
+                              servico,
+                              index
+                            ) => {
+
+                              const descricao =
+                                extrairTextoServico(
+                                  servico
+                                );
+
+                              const fotosServico =
+                                extrairFotosServico(
+                                  servico
+                                );
+
+                              return (
+                                <div
+                                  key={
+                                    index
+                                  }
+                                  style={{
+                                    border:
+                                      "1px solid #eee",
+                                    borderRadius:
+                                      "8px",
+                                    padding:
+                                      "12px",
+                                    marginTop:
+                                      "10px",
+                                  }}
+                                >
+
+                                  <strong>
+                                    Serviço{" "}
+                                    {index +
+                                      1}
+                                  </strong>
+
+                                  <p
+                                    style={{
+                                      whiteSpace:
+                                        "pre-wrap",
+                                      lineHeight:
+                                        1.5,
+                                    }}
+                                  >
+                                    {descricao ||
+                                      "Serviço registrado."}
+                                  </p>
+
+                                  {fotosServico.length >
+                                    0 && (
+
+                                    <div>
+
+                                      <strong>
+                                        Fotos do serviço
+                                      </strong>
+
+                                      <div
+                                        style={{
+                                          display:
+                                            "grid",
+                                          gridTemplateColumns:
+                                            "repeat(auto-fit,minmax(180px,1fr))",
+                                          gap:
+                                            "12px",
+                                          marginTop:
+                                            "10px",
+                                        }}
+                                      >
+
+                                        {fotosServico.map(
+                                          (
+                                            foto,
+                                            fotoIndex
+                                          ) => (
+
+                                            <div
+                                              key={
+                                                fotoIndex
+                                              }
+                                              style={{
+                                                border:
+                                                  "1px solid #ddd",
+                                                borderRadius:
+                                                  "8px",
+                                                padding:
+                                                  "8px",
+                                              }}
+                                            >
+
+                                              <img
+                                                src={
+                                                  foto.imagem
+                                                }
+                                                alt={`Foto ${
+                                                  fotoIndex +
+                                                  1
+                                                }`}
+                                                style={{
+                                                  width:
+                                                    "100%",
+                                                  maxHeight:
+                                                    "300px",
+                                                  objectFit:
+                                                    "contain",
+                                                  borderRadius:
+                                                    "6px",
+                                                  background:
+                                                    "#f5f5f5",
+                                                }}
+                                              />
+
+                                              {foto.descricao && (
+                                                <p
+                                                  style={{
+                                                    fontSize:
+                                                      "12px",
+                                                    color:
+                                                      "#555",
+                                                  }}
+                                                >
+                                                  {
+                                                    foto.descricao
+                                                  }
+                                                </p>
+                                              )}
+
+                                            </div>
+
+                                          )
+                                        )}
+
+                                      </div>
+
+                                    </div>
+
+                                  )}
+
+                                </div>
+                              );
+                            }
+                          )}
+
+                        </div>
+
                       )}
-                    />
 
-                    <InfoCard
-                      titulo="Tipo"
-                      valor={manutencao.tipo}
-                    />
+                      {fotos.length >
+                        0 && (
 
-                    <InfoCard
-                      titulo="Mecânico"
-                      valor={
-                        manutencao.mecanico
-                      }
-                    />
+                        <p
+                          style={{
+                            fontSize:
+                              "12px",
+                            color:
+                              "#666",
+                            marginTop:
+                              "12px",
+                          }}
+                        >
+                          📷{" "}
+                          {fotos.length}{" "}
+                          {fotos.length ===
+                          1
+                            ? "foto"
+                            : "fotos"}{" "}
+                          anexada
+                          {fotos.length ===
+                          1
+                            ? ""
+                            : "s"}
+                        </p>
 
-                    <InfoCard
-                      titulo="Horímetro"
-                      valor={
-                        manutencao.horimetro
-                      }
-                    />
+                      )}
 
-                    <InfoCard
-                      titulo="Prioridade"
-                      valor={
-                        manutencao.prioridade
-                      }
-                    />
+                    </div>
+                  );
+                }
+              )
 
-                    <InfoCard
-                      titulo="Status"
-                      valor={
-                        manutencao.status
-                      }
-                    />
-
-                  </div>
-                </div>
-              ))
             )}
 
           </div>
 
         </div>
+
       </main>
     );
   }
+
+  /* =======================================================
+     LISTA DE EQUIPAMENTOS
+  ======================================================= */
 
   return (
     <main className="mastermec-app">
@@ -853,14 +1810,21 @@ export default function EquipamentosPage() {
         <div style={topoStyle}>
 
           <div>
+
             <h1 style={{ margin: 0 }}>
               Equipamentos
             </h1>
 
-            <p style={{ color: "#666" }}>
-              {equipamentos.length} equipamentos
-              cadastrados no sistema
+            <p
+              style={{
+                color: "#666",
+              }}
+            >
+              {equipamentos.length}{" "}
+              equipamentos cadastrados
+              no sistema
             </p>
+
           </div>
 
           <button
@@ -875,7 +1839,10 @@ export default function EquipamentosPage() {
 
         <div style={pesquisaStyle}>
 
-          <Search size={20} color="#777" />
+          <Search
+            size={20}
+            color="#777"
+          />
 
           <input
             type="text"
@@ -895,20 +1862,35 @@ export default function EquipamentosPage() {
         </div>
 
         {carregando ? (
+
           <div style={mensagemStyle}>
             Carregando equipamentos...
           </div>
-        ) : equipamentosFiltrados.length === 0 ? (
+
+        ) : equipamentosFiltrados.length ===
+          0 ? (
+
           <div style={mensagemStyle}>
             Nenhum equipamento encontrado.
           </div>
-        ) : (
-          <div style={tabelaBoxStyle}>
 
-            <table style={tabelaStyle}>
+        ) : (
+
+          <div
+            style={tabelaBoxStyle}
+          >
+
+            <table
+              style={tabelaStyle}
+            >
 
               <thead>
-                <tr style={cabecalhoTabelaStyle}>
+
+                <tr
+                  style={
+                    cabecalhoTabelaStyle
+                  }
+                >
 
                   <th style={thStyle}>
                     Categoria
@@ -951,6 +1933,7 @@ export default function EquipamentosPage() {
                   </th>
 
                 </tr>
+
               </thead>
 
               <tbody>
@@ -964,19 +1947,28 @@ export default function EquipamentosPage() {
                       ).length;
 
                     return (
+
                       <tr
-                        key={equipamento.id}
+                        key={
+                          equipamento.id
+                        }
                         style={{
                           borderTop:
                             "1px solid #eee",
                         }}
                       >
 
-                        <td style={tdStyle}>
-                          {equipamento.categoria}
+                        <td
+                          style={tdStyle}
+                        >
+                          {
+                            equipamento.categoria
+                          }
                         </td>
 
-                        <td style={tdStyle}>
+                        <td
+                          style={tdStyle}
+                        >
                           <strong>
                             {
                               equipamento.descricao_bem
@@ -984,49 +1976,80 @@ export default function EquipamentosPage() {
                           </strong>
                         </td>
 
-                        <td style={tdStyle}>
-                          {equipamento.fabricante}
+                        <td
+                          style={tdStyle}
+                        >
+                          {
+                            equipamento.fabricante
+                          }
                         </td>
 
-                        <td style={tdStyle}>
-                          {equipamento.modelo}
+                        <td
+                          style={tdStyle}
+                        >
+                          {
+                            equipamento.modelo
+                          }
                         </td>
 
-                        <td style={tdStyle}>
-                          {equipamento.ano}
+                        <td
+                          style={tdStyle}
+                        >
+                          {
+                            equipamento.ano
+                          }
                         </td>
 
-                        <td style={tdStyle}>
+                        <td
+                          style={tdStyle}
+                        >
                           {
                             equipamento.numero_serie_chassi
                           }
                         </td>
 
-                        <td style={tdStyle}>
-                          {equipamento.placa || "-"}
+                        <td
+                          style={tdStyle}
+                        >
+                          {
+                            equipamento.placa ||
+                            "-"
+                          }
                         </td>
 
-                        <td style={tdStyle}>
-                          {equipamento.horimetro || "-"}
+                        <td
+                          style={tdStyle}
+                        >
+                          {
+                            equipamento.horimetro ||
+                            "-"
+                          }
                         </td>
 
-                        <td style={tdStyle}>
+                        <td
+                          style={tdStyle}
+                        >
 
                           <span
                             style={statusStyle(
                               equipamento.status
                             )}
                           >
-                            {equipamento.status}
+                            {
+                              equipamento.status
+                            }
                           </span>
 
                         </td>
 
-                        <td style={tdStyle}>
+                        <td
+                          style={tdStyle}
+                        >
 
                           <div
                             style={{
-                              display: "flex",
+                              display:
+                                "flex",
                               gap: "6px",
                             }}
                           >
@@ -1038,9 +2061,13 @@ export default function EquipamentosPage() {
                                   equipamento
                                 )
                               }
-                              style={acaoStyle}
+                              style={
+                                acaoStyle
+                              }
                             >
-                              <Eye size={17} />
+                              <Eye
+                                size={17}
+                              />
                             </button>
 
                             <button
@@ -1052,11 +2079,15 @@ export default function EquipamentosPage() {
                               }
                               style={{
                                 ...acaoStyle,
-                                background: "#222",
-                                color: "#fff",
+                                background:
+                                  "#222",
+                                color:
+                                  "#fff",
                               }}
                             >
-                              <Printer size={17} />
+                              <Printer
+                                size={17}
+                              />
                             </button>
 
                             <button
@@ -1066,9 +2097,13 @@ export default function EquipamentosPage() {
                                   equipamento
                                 )
                               }
-                              style={acaoStyle}
+                              style={
+                                acaoStyle
+                              }
                             >
-                              <Pencil size={17} />
+                              <Pencil
+                                size={17}
+                              />
                             </button>
 
                             <button
@@ -1080,33 +2115,48 @@ export default function EquipamentosPage() {
                               }
                               style={{
                                 ...acaoStyle,
-                                background: "#f8dddd",
-                                color: "#b00000",
+                                background:
+                                  "#f8dddd",
+                                color:
+                                  "#b00000",
                               }}
                             >
-                              <Trash2 size={17} />
+                              <Trash2
+                                size={17}
+                              />
                             </button>
 
                           </div>
 
-                          {totalManutencoes > 0 && (
+                          {totalManutencoes >
+                            0 && (
+
                             <small
                               style={{
-                                display: "block",
-                                marginTop: "5px",
-                                color: "#666",
+                                display:
+                                  "block",
+                                marginTop:
+                                  "5px",
+                                color:
+                                  "#666",
                               }}
                             >
-                              {totalManutencoes} manutenção
-                              {totalManutencoes !== 1
+                              {
+                                totalManutencoes
+                              }{" "}
+                              manutenção
+                              {totalManutencoes !==
+                              1
                                 ? "s"
                                 : ""}
                             </small>
+
                           )}
 
                         </td>
 
                       </tr>
+
                     );
                   }
                 )}
@@ -1116,82 +2166,135 @@ export default function EquipamentosPage() {
             </table>
 
           </div>
+
         )}
 
+        {/* =================================================
+            MODAL
+        ================================================= */}
+
         {mostrarCadastro && (
-          <div style={modalFundoStyle}>
 
-            <div style={modalStyle}>
+          <div
+            style={
+              modalFundoStyle
+            }
+          >
 
-              <div style={modalTopoStyle}>
+            <div
+              style={modalStyle}
+            >
 
-                <h2 style={{ margin: 0 }}>
-                  {editandoId !== null
+              <div
+                style={
+                  modalTopoStyle
+                }
+              >
+
+                <h2
+                  style={{
+                    margin: 0,
+                  }}
+                >
+                  {editandoId !==
+                  null
                     ? "Editar equipamento"
                     : "Novo equipamento"}
                 </h2>
 
                 <button
                   onClick={() =>
-                    setMostrarCadastro(false)
+                    setMostrarCadastro(
+                      false
+                    )
                   }
-                  style={fecharStyle}
+                  style={
+                    fecharStyle
+                  }
                 >
                   <X size={19} />
                 </button>
 
               </div>
 
-              <div style={formGridStyle}>
+              <div
+                style={
+                  formGridStyle
+                }
+              >
 
                 <Campo
                   label="Categoria"
-                  value={form.categoria}
-                  onChange={(valor) =>
+                  value={
+                    form.categoria
+                  }
+                  onChange={(
+                    valor
+                  ) =>
                     setForm({
                       ...form,
-                      categoria: valor,
+                      categoria:
+                        valor,
                     })
                   }
                 />
 
                 <Campo
                   label="Descrição do Bem"
-                  value={form.descricao_bem}
-                  onChange={(valor) =>
+                  value={
+                    form.descricao_bem
+                  }
+                  onChange={(
+                    valor
+                  ) =>
                     setForm({
                       ...form,
-                      descricao_bem: valor,
+                      descricao_bem:
+                        valor,
                     })
                   }
                 />
 
                 <Campo
                   label="Marca / Fabricante"
-                  value={form.fabricante}
-                  onChange={(valor) =>
+                  value={
+                    form.fabricante
+                  }
+                  onChange={(
+                    valor
+                  ) =>
                     setForm({
                       ...form,
-                      fabricante: valor,
+                      fabricante:
+                        valor,
                     })
                   }
                 />
 
                 <Campo
                   label="Modelo"
-                  value={form.modelo}
-                  onChange={(valor) =>
+                  value={
+                    form.modelo
+                  }
+                  onChange={(
+                    valor
+                  ) =>
                     setForm({
                       ...form,
-                      modelo: valor,
+                      modelo:
+                        valor,
                     })
                   }
                 />
 
                 <Campo
                   label="Ano Modelo"
-                  value={form.ano}
-                  onChange={(valor) =>
+                  value={
+                    form.ano
+                  }
+                  onChange={(
+                    valor
+                  ) =>
                     setForm({
                       ...form,
                       ano: valor,
@@ -1204,7 +2307,9 @@ export default function EquipamentosPage() {
                   value={
                     form.numero_serie_chassi
                   }
-                  onChange={(valor) =>
+                  onChange={(
+                    valor
+                  ) =>
                     setForm({
                       ...form,
                       numero_serie_chassi:
@@ -1215,8 +2320,12 @@ export default function EquipamentosPage() {
 
                 <Campo
                   label="Placa"
-                  value={form.placa}
-                  onChange={(valor) =>
+                  value={
+                    form.placa
+                  }
+                  onChange={(
+                    valor
+                  ) =>
                     setForm({
                       ...form,
                       placa: valor,
@@ -1226,31 +2335,47 @@ export default function EquipamentosPage() {
 
                 <Campo
                   label="Horímetro"
-                  value={form.horimetro}
-                  onChange={(valor) =>
+                  value={
+                    form.horimetro
+                  }
+                  onChange={(
+                    valor
+                  ) =>
                     setForm({
                       ...form,
-                      horimetro: valor,
+                      horimetro:
+                        valor,
                     })
                   }
                 />
 
                 <div>
-                  <label style={labelStyle}>
+
+                  <label
+                    style={
+                      labelStyle
+                    }
+                  >
                     Status
                   </label>
 
                   <select
-                    value={form.status}
+                    value={
+                      form.status
+                    }
                     onChange={(e) =>
                       setForm({
                         ...form,
                         status:
-                          e.target.value,
+                          e.target
+                            .value,
                       })
                     }
-                    style={inputStyle}
+                    style={
+                      inputStyle
+                    }
                   >
+
                     <option value="Operando">
                       Operando
                     </option>
@@ -1262,11 +2387,18 @@ export default function EquipamentosPage() {
                     <option value="Parada">
                       Parada
                     </option>
+
                   </select>
+
                 </div>
 
                 <div>
-                  <label style={labelStyle}>
+
+                  <label
+                    style={
+                      labelStyle
+                    }
+                  >
                     Próxima manutenção
                   </label>
 
@@ -1279,22 +2411,30 @@ export default function EquipamentosPage() {
                       setForm({
                         ...form,
                         proxima_manutencao:
-                          e.target.value,
+                          e.target
+                            .value,
                       })
                     }
-                    style={inputStyle}
+                    style={
+                      inputStyle
+                    }
                   />
+
                 </div>
 
               </div>
 
               <button
-                onClick={salvarEquipamento}
+                onClick={
+                  salvarEquipamento
+                }
                 style={{
                   ...botaoPreto,
                   width: "100%",
-                  justifyContent: "center",
-                  marginTop: "25px",
+                  justifyContent:
+                    "center",
+                  marginTop:
+                    "25px",
                 }}
               >
                 <Save size={19} />
@@ -1304,6 +2444,7 @@ export default function EquipamentosPage() {
             </div>
 
           </div>
+
         )}
 
       </div>
@@ -1312,9 +2453,9 @@ export default function EquipamentosPage() {
   );
 }
 
-/* =========================
+/* =========================================================
    COMPONENTES
-========================= */
+========================================================= */
 
 function Campo({
   label,
@@ -1323,21 +2464,29 @@ function Campo({
 }: {
   label: string;
   value: string;
-  onChange: (valor: string) => void;
+  onChange: (
+    valor: string
+  ) => void;
 }) {
   return (
     <div>
-      <label style={labelStyle}>
+
+      <label
+        style={labelStyle}
+      >
         {label}
       </label>
 
       <input
         value={value}
         onChange={(e) =>
-          onChange(e.target.value)
+          onChange(
+            e.target.value
+          )
         }
         style={inputStyle}
       />
+
     </div>
   );
 }
@@ -1350,7 +2499,10 @@ function InfoCard({
   valor?: string | null;
 }) {
   return (
-    <div style={infoCardStyle}>
+    <div
+      style={infoCardStyle}
+    >
+
       <strong
         style={{
           fontSize: "12px",
@@ -1368,13 +2520,14 @@ function InfoCard({
       >
         {valor || "-"}
       </div>
+
     </div>
   );
 }
 
-/* =========================
+/* =========================================================
    ESTILOS
-========================= */
+========================================================= */
 
 const containerStyle: React.CSSProperties = {
   padding: "25px",
@@ -1435,7 +2588,8 @@ const tabelaBoxStyle: React.CSSProperties = {
   background: "#fff",
   borderRadius: "12px",
   overflowX: "auto",
-  boxShadow: "0 2px 10px rgba(0,0,0,.06)",
+  boxShadow:
+    "0 2px 10px rgba(0,0,0,.06)",
 };
 
 const tabelaStyle: React.CSSProperties = {
@@ -1552,7 +2706,8 @@ const historicoBoxStyle: React.CSSProperties = {
   background: "#fff",
   borderRadius: "12px",
   padding: "20px",
-  boxShadow: "0 2px 10px rgba(0,0,0,.08)",
+  boxShadow:
+    "0 2px 10px rgba(0,0,0,.08)",
 };
 
 const manutencaoStyle: React.CSSProperties = {
