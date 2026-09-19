@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Truck,
+  Tractor,
   CheckCircle2,
   Wrench,
   AlertCircle,
@@ -35,6 +36,35 @@ type Manutencao = {
   servicos: any;
 };
 
+function ehCaminhao(equipamento: Equipamento) {
+  const texto = `
+    ${equipamento.nome}
+    ${equipamento.modelo}
+    ${equipamento.fabricante}
+  `.toLowerCase();
+
+  const palavrasCaminhao = [
+    "caminhao",
+    "caminhão",
+    "truck",
+    "scania",
+    "volvo fh",
+    "volvo fm",
+    "mercedes",
+    "actros",
+    "iveco",
+    "daf",
+    "constellation",
+    "cargo",
+    "atego",
+    "axor",
+  ];
+
+  return palavrasCaminhao.some((palavra) =>
+    texto.includes(palavra)
+  );
+}
+
 export default function DashboardPage() {
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
   const [manutencoes, setManutencoes] = useState<Manutencao[]>([]);
@@ -47,18 +77,20 @@ export default function DashboardPage() {
   async function carregarDados() {
     setCarregando(true);
 
-    const [{ data: equipamentosData }, { data: manutencoesData }] =
-      await Promise.all([
-        supabase
-          .from("equipamentos")
-          .select("*")
-          .order("id", { ascending: false }),
+    const [
+      { data: equipamentosData },
+      { data: manutencoesData },
+    ] = await Promise.all([
+      supabase
+        .from("equipamentos")
+        .select("*")
+        .order("id", { ascending: false }),
 
-        supabase
-          .from("manutencoes")
-          .select("*")
-          .order("id", { ascending: false }),
-      ]);
+      supabase
+        .from("manutencoes")
+        .select("*")
+        .order("id", { ascending: false }),
+    ]);
 
     setEquipamentos(equipamentosData || []);
     setManutencoes(manutencoesData || []);
@@ -70,17 +102,20 @@ export default function DashboardPage() {
 
   const equipamentosOperando = equipamentos.filter(
     (equipamento) =>
-      equipamento.status?.toLowerCase().trim() === "operando"
+      equipamento.status?.toLowerCase().trim() ===
+      "operando"
   ).length;
 
   const equipamentosManutencao = equipamentos.filter(
     (equipamento) =>
-      equipamento.status?.toLowerCase().trim() === "em manutenção"
+      equipamento.status?.toLowerCase().trim() ===
+      "em manutenção"
   ).length;
 
   const manutencoesAbertas = manutencoes.filter(
     (manutencao) =>
-      manutencao.status?.toLowerCase().trim() !== "concluída"
+      manutencao.status?.toLowerCase().trim() !==
+      "concluída"
   ).length;
 
   const cards = [
@@ -120,7 +155,13 @@ export default function DashboardPage() {
 
   return (
     <main className="dashboard-page">
+
+      {/* ================================================= */}
+      {/* HERO */}
+      {/* ================================================= */}
+
       <section className="dashboard-hero">
+
         <div className="hero-label">
           <Activity size={20} />
           <span>SISTEMA DE GESTÃO</span>
@@ -129,17 +170,29 @@ export default function DashboardPage() {
         <h1>Controle de Manutenção</h1>
 
         <p>
-          Acompanhe sua frota, manutenção e equipe em um único lugar.
+          Acompanhe sua frota, manutenção e equipe em
+          um único lugar.
         </p>
 
-        <Link href="/maquinas" className="hero-equipment-link">
+        <Link
+          href="/maquinas"
+          className="hero-equipment-link"
+        >
           <Truck size={28} />
+
           <span>Equipamentos</span>
+
           <ArrowRight size={28} />
         </Link>
+
       </section>
 
+      {/* ================================================= */}
+      {/* CARDS */}
+      {/* ================================================= */}
+
       <section className="dashboard-cards">
+
         {cards.map((card) => {
           const Icone = card.icone;
 
@@ -149,12 +202,18 @@ export default function DashboardPage() {
               href={card.href}
               className={`dashboard-card-link ${card.classe}`}
             >
+
               <div className="dashboard-card">
+
                 <div className="dashboard-card-icon">
-                  <Icone size={34} strokeWidth={2.2} />
+                  <Icone
+                    size={34}
+                    strokeWidth={2.2}
+                  />
                 </div>
 
                 <div className="dashboard-card-content">
+
                   <span className="dashboard-card-title">
                     {card.titulo}
                   </span>
@@ -166,116 +225,198 @@ export default function DashboardPage() {
                   <span className="dashboard-card-description">
                     {card.descricao}
                   </span>
+
                 </div>
 
                 <ArrowRight
                   className="dashboard-card-arrow"
                   size={24}
                 />
+
               </div>
+
             </Link>
           );
         })}
+
       </section>
 
+      {/* ================================================= */}
+      {/* EQUIPAMENTOS */}
+      {/* ================================================= */}
+
       <section className="dashboard-section">
+
         <div className="section-header">
+
           <div>
             <h2>Equipamentos</h2>
             <p>Situação atual da frota</p>
           </div>
 
-          <Link href="/maquinas" className="see-all-link">
+          <Link
+            href="/maquinas"
+            className="see-all-link"
+          >
             Ver todos
             <ArrowRight size={22} />
           </Link>
+
         </div>
 
         <div className="equipment-list">
+
           {carregando ? (
             <div className="empty-dashboard">
               Carregando equipamentos...
             </div>
+
           ) : equipamentos.length === 0 ? (
             <div className="empty-dashboard">
               Nenhum equipamento cadastrado.
             </div>
+
           ) : (
-            equipamentos.slice(0, 6).map((equipamento) => (
-              <Link
-                key={equipamento.id}
-                href={`/maquinas?id=${equipamento.id}`}
-                className="equipment-dashboard-item"
-              >
-                <div className="equipment-icon">
-                  <Truck size={28} />
-                </div>
 
-                <div className="equipment-info">
-                  <strong>{equipamento.nome}</strong>
+            equipamentos
+              .slice(0, 6)
+              .map((equipamento) => {
 
-                  <span>
-                    {equipamento.fabricante}{" "}
-                    {equipamento.modelo}
-                  </span>
-                </div>
+                const caminhão =
+                  ehCaminhao(equipamento);
 
-                <div className="equipment-status">
-                  <span
-                    className={`status-dot ${
-                      equipamento.status
-                        ?.toLowerCase()
-                        .includes("manutenção")
-                        ? "status-yellow"
-                        : equipamento.status
+                const IconeEquipamento =
+                  caminhão ? Truck : Tractor;
+
+                return (
+                  <Link
+                    key={equipamento.id}
+                    href={`/maquinas?id=${equipamento.id}`}
+                    className="equipment-dashboard-item"
+                  >
+
+                    <div className="equipment-icon">
+                      <IconeEquipamento
+                        size={28}
+                        strokeWidth={2.1}
+                      />
+                    </div>
+
+                    <div className="equipment-info">
+
+                      <strong>
+                        {equipamento.nome}
+                      </strong>
+
+                      <span>
+                        {equipamento.fabricante}{" "}
+                        {equipamento.modelo}
+                      </span>
+
+                    </div>
+
+                    <div className="equipment-status">
+
+                      <span
+                        className={`status-dot ${
+                          equipamento.status
                             ?.toLowerCase()
-                            .includes("parada")
-                        ? "status-red"
-                        : "status-green"
-                    }`}
-                  />
+                            .includes("manutenção")
+                            ? "status-yellow"
+                            : equipamento.status
+                                ?.toLowerCase()
+                                .includes("parada")
+                            ? "status-red"
+                            : "status-green"
+                        }`}
+                      />
 
-                  <span>{equipamento.status || "Sem status"}</span>
-                </div>
+                      <span>
+                        {equipamento.status ||
+                          "Sem status"}
+                      </span>
 
-                <ArrowRight
-                  size={22}
-                  className="equipment-arrow"
-                />
-              </Link>
-            ))
+                    </div>
+
+                    <ArrowRight
+                      size={22}
+                      className="equipment-arrow"
+                    />
+
+                  </Link>
+                );
+              })
           )}
+
         </div>
+
       </section>
+
+      {/* ================================================= */}
+      {/* ACESSO RÁPIDO */}
+      {/* ================================================= */}
 
       <section className="dashboard-quick-access">
-        <Link href="/maquinas" className="quick-card">
+
+        <Link
+          href="/maquinas"
+          className="quick-card"
+        >
+
           <Truck size={30} />
+
           <div>
             <strong>Equipamentos</strong>
-            <span>Cadastrar e consultar equipamentos</span>
+
+            <span>
+              Cadastrar e consultar equipamentos
+            </span>
           </div>
+
           <ArrowRight size={22} />
+
         </Link>
 
-        <Link href="/manutencao" className="quick-card">
+        <Link
+          href="/manutencao"
+          className="quick-card"
+        >
+
           <Wrench size={30} />
+
           <div>
             <strong>Manutenção</strong>
-            <span>Registrar e acompanhar serviços</span>
+
+            <span>
+              Registrar e acompanhar serviços
+            </span>
           </div>
+
           <ArrowRight size={22} />
+
         </Link>
 
-        <Link href="/mecanicos" className="quick-card">
+        <Link
+          href="/mecanicos"
+          className="quick-card"
+        >
+
           <Users size={30} />
+
           <div>
             <strong>Mecânicos</strong>
-            <span>Gerenciar equipe técnica</span>
+
+            <span>
+              Gerenciar equipe técnica
+            </span>
           </div>
+
           <ArrowRight size={22} />
+
         </Link>
+
       </section>
+
     </main>
   );
 }
