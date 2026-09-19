@@ -18,9 +18,26 @@ html {
 
 body {
   font-family: "Inter", Arial, Helvetica, sans-serif;
-  background: #f3f5f8;
   color: #172033;
   overflow-x: hidden;
+
+  background:
+    radial-gradient(
+      circle at 10% 5%,
+      rgba(255, 185, 40, 0.16),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 90% 10%,
+      rgba(37, 99, 235, 0.10),
+      transparent 30%
+    ),
+    linear-gradient(
+      135deg,
+      #f8fafc 0%,
+      #eef2f7 50%,
+      #f7f9fc 100%
+    );
 }
 
 button,
@@ -36,6 +53,7 @@ button {
 
 a {
   color: inherit;
+  text-decoration: none;
 }
 
 /* ================================================= */
@@ -45,13 +63,19 @@ a {
 .app-shell {
   min-height: 100vh;
   width: 100%;
+
   background:
     radial-gradient(
-      circle at top right,
-      rgba(245, 166, 35, 0.08),
-      transparent 35%
+      circle at 15% 10%,
+      rgba(255, 190, 45, 0.10),
+      transparent 25%
     ),
-    #f3f5f8;
+    radial-gradient(
+      circle at 85% 15%,
+      rgba(59, 130, 246, 0.08),
+      transparent 28%
+    ),
+    transparent;
 }
 
 /* ================================================= */
@@ -72,7 +96,7 @@ a {
   background:
     linear-gradient(
       180deg,
-      #101a2b 0%,
+      #101b2d 0%,
       #0b1423 100%
     );
 
@@ -84,11 +108,12 @@ a {
   z-index: 1000;
 
   transition:
-    width 0.25s ease,
-    transform 0.25s ease;
+    width 0.3s ease,
+    transform 0.3s ease;
 
   box-shadow:
-    8px 0 30px rgba(15, 23, 42, 0.08);
+    10px 0 35px
+      rgba(15, 23, 42, 0.12);
 }
 
 .sidebar-recolhida {
@@ -131,20 +156,32 @@ a {
   align-items: center;
   justify-content: center;
 
-  border-radius: 13px;
+  border-radius: 14px;
 
   background:
     linear-gradient(
       135deg,
-      #ffbd39,
-      #f08a00
+      #ffd15c,
+      #f28c00
     );
 
   color: #101827;
 
   box-shadow:
-    0 8px 20px
-      rgba(245, 166, 35, 0.25);
+    0 8px 25px
+      rgba(245, 166, 35, 0.28);
+
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.brand:hover .brand-icon {
+  transform: rotate(-5deg) scale(1.05);
+
+  box-shadow:
+    0 12px 30px
+      rgba(245, 166, 35, 0.38);
 }
 
 .brand-text {
@@ -209,38 +246,51 @@ a {
 
   gap: 13px;
 
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 
   padding: 9px 12px;
 
-  border-radius: 11px;
+  border-radius: 14px;
 
   text-decoration: none;
 
   color: #aeb9c9;
 
   transition:
-    background 0.2s ease,
-    color 0.2s ease,
-    transform 0.2s ease;
+    background 0.25s ease,
+    color 0.25s ease,
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
 .navigation-item:hover {
   background:
-    rgba(255, 255, 255, 0.055);
+    rgba(255, 255, 255, 0.075);
 
   color: white;
+
+  transform: translateX(3px);
+
+  box-shadow:
+    0 8px 22px
+      rgba(0, 0, 0, 0.12);
 }
 
 .navigation-item-ativo {
   background:
     linear-gradient(
-      90deg,
-      rgba(255, 178, 27, 0.19),
-      rgba(255, 178, 27, 0.05)
+      100deg,
+      rgba(255, 178, 27, 0.23),
+      rgba(255, 178, 27, 0.06)
     );
 
-  color: #ffb21b;
+  color: #ffbd39;
+
+  box-shadow:
+    inset 0 0 0 1px
+      rgba(255, 190, 45, 0.08),
+    0 8px 20px
+      rgba(0, 0, 0, 0.10);
 }
 
 .navigation-item-ativo::before {
@@ -249,19 +299,23 @@ a {
   position: absolute;
 
   left: 0;
-  top: 12px;
-  bottom: 12px;
+  top: 10px;
+  bottom: 10px;
 
-  width: 3px;
+  width: 4px;
 
-  border-radius: 0 4px 4px 0;
+  border-radius: 0 5px 5px 0;
 
   background: #ffb21b;
+
+  box-shadow:
+    0 0 12px
+      rgba(255, 178, 27, 0.65);
 }
 
 .navigation-icon {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
 
   flex-shrink: 0;
 
@@ -269,13 +323,26 @@ a {
   align-items: center;
   justify-content: center;
 
-  border-radius: 9px;
+  border-radius: 11px;
+
+  background:
+    rgba(255, 255, 255, 0.025);
+
+  transition:
+    transform 0.25s ease,
+    background 0.25s ease;
 }
 
-.navigation-item-ativo
-  .navigation-icon {
+.navigation-item:hover .navigation-icon {
+  transform: scale(1.08);
+
   background:
-    rgba(255, 178, 27, 0.12);
+    rgba(255, 255, 255, 0.08);
+}
+
+.navigation-item-ativo .navigation-icon {
+  background:
+    rgba(255, 178, 27, 0.14);
 }
 
 .navigation-text {
@@ -305,7 +372,7 @@ a {
 }
 
 .navigation-item-ativo
-  .navigation-text small {
+.navigation-text small {
   color: #b78b35;
 }
 
@@ -343,7 +410,9 @@ a {
 
   box-shadow:
     0 0 0 4px
-      rgba(53, 200, 121, 0.1);
+      rgba(53, 200, 121, 0.10),
+    0 0 12px
+      rgba(53, 200, 121, 0.40);
 }
 
 .sidebar-version {
@@ -363,11 +432,11 @@ a {
 .sidebar-collapse-button {
   position: absolute;
 
-  right: -13px;
+  right: -14px;
   top: 105px;
 
-  width: 27px;
-  height: 27px;
+  width: 29px;
+  height: 29px;
 
   display: flex;
   align-items: center;
@@ -382,10 +451,22 @@ a {
   color: #526174;
 
   box-shadow:
-    0 4px 12px
-      rgba(15, 23, 42, 0.12);
+    0 5px 15px
+      rgba(15, 23, 42, 0.16);
 
   z-index: 5;
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.sidebar-collapse-button:hover {
+  transform: scale(1.08);
+
+  box-shadow:
+    0 8px 20px
+      rgba(15, 23, 42, 0.20);
 }
 
 .icone-girado {
@@ -402,7 +483,7 @@ a {
   margin-left: 270px;
 
   transition:
-    margin-left 0.25s ease;
+    margin-left 0.3s ease;
 }
 
 .app-main-recolhido {
@@ -426,13 +507,18 @@ a {
   padding: 0 30px;
 
   background:
-    rgba(255, 255, 255, 0.92);
+    rgba(255, 255, 255, 0.82);
 
-  border-bottom: 1px solid #e4e8ee;
+  border-bottom: 1px solid
+    rgba(221, 227, 235, 0.85);
 
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(18px);
 
   z-index: 900;
+
+  box-shadow:
+    0 4px 20px
+      rgba(15, 23, 42, 0.035);
 }
 
 .topbar-info {
@@ -471,10 +557,23 @@ a {
   align-items: center;
   gap: 8px;
 
+  padding: 7px 12px;
+
+  border-radius: 30px;
+
+  background:
+    rgba(255, 255, 255, 0.75);
+
+  border: 1px solid #e7ebf0;
+
   color: #687588;
 
   font-size: 11px;
   font-weight: 600;
+
+  box-shadow:
+    0 4px 15px
+      rgba(15, 23, 42, 0.04);
 }
 
 .topbar-mobile-brand {
@@ -482,7 +581,7 @@ a {
 }
 
 /* ================================================= */
-/* CONTEÚDO DAS PÁGINAS */
+/* CONTEÚDO */
 /* ================================================= */
 
 .app-content {
@@ -495,12 +594,11 @@ a {
 }
 
 /* ================================================= */
-/* COMPATIBILIDADE COM AS PÁGINAS EXISTENTES */
+/* COMPATIBILIDADE */
 /* ================================================= */
 
 .mastermec-app {
   min-height: auto !important;
-
   width: 100% !important;
 
   background: transparent !important;
@@ -508,17 +606,14 @@ a {
   color: #172033 !important;
 
   padding: 0 !important;
-
   margin: 0 !important;
 }
 
 .page-container {
   width: 100% !important;
-
   max-width: none !important;
 
   margin: 0 !important;
-
   padding: 0 !important;
 }
 
@@ -527,7 +622,7 @@ a {
 }
 
 /* ================================================= */
-/* CABEÇALHOS EXISTENTES */
+/* CABEÇALHOS */
 /* ================================================= */
 
 .page-header {
@@ -544,11 +639,7 @@ a {
 .page-header h1 {
   color: #172033 !important;
 
-  font-size: clamp(
-    24px,
-    3vw,
-    32px
-  ) !important;
+  font-size: clamp(24px, 3vw, 32px) !important;
 
   line-height: 1.2;
 
@@ -564,477 +655,20 @@ a {
 }
 
 /* ================================================= */
-/* CARDS */
+/* CARDS GENÉRICOS */
 /* ================================================= */
 
 .card,
 .cards-grid > div,
 .cards > div {
-  border-radius: 14px;
+  border-radius: 18px;
 
-  border: 1px solid #e5e9ef;
-
-  background: white;
-
-  box-shadow:
-    0 4px 18px
-      rgba(15, 23, 42, 0.045);
-}
-
-/* ================================================= */
-/* FORMULÁRIOS */
-/* ================================================= */
-
-.formulario-maquina {
-  width: 100%;
-
-  background: white !important;
-
-  color: #172033 !important;
-
-  border: 1px solid #e1e6ed !important;
-
-  border-radius: 14px !important;
-
-  box-shadow:
-    0 8px 25px
-      rgba(15, 23, 42, 0.06) !important;
-
-  padding: 22px !important;
-
-  margin-bottom: 25px;
-}
-
-.formulario-maquina h2 {
-  color: #172033 !important;
-
-  font-size: 19px !important;
-
-  margin-bottom: 20px !important;
-}
-
-.form-grid {
-  display: grid;
-
-  grid-template-columns:
-    repeat(
-      4,
-      minmax(0, 1fr)
-    );
-
-  gap: 14px;
-}
-
-.form-grid input,
-.form-grid select,
-.form-grid textarea,
-.formulario input,
-.formulario select,
-.formulario textarea {
-  width: 100%;
-
-  min-width: 0;
-
-  height: 46px;
-
-  padding: 0 13px;
-
-  border: 1px solid #d9dfe7 !important;
-
-  border-radius: 8px !important;
-
-  background: #fbfcfd !important;
-
-  color: #172033 !important;
-
-  font-size: 13px;
-
-  outline: none;
-}
-
-.form-grid textarea,
-.formulario textarea {
-  height: auto;
-
-  min-height: 110px;
-
-  padding: 13px;
-}
-
-.form-grid input:focus,
-.form-grid select:focus,
-.formulario input:focus,
-.formulario select:focus,
-.formulario textarea:focus {
-  border-color: #f0a30a !important;
-
-  box-shadow:
-    0 0 0 3px
-      rgba(240, 163, 10, 0.1);
-}
-
-/* ================================================= */
-/* BOTÕES */
-/* ================================================= */
-
-.btn-novo,
-.btn-salvar,
-.botaoPrimario {
-  border: none !important;
+  border: 1px solid
+    rgba(226, 231, 238, 0.95);
 
   background:
-    linear-gradient(
-      135deg,
-      #ffb72b,
-      #ed9500
-    ) !important;
-
-  color: #172033 !important;
-
-  font-weight: 700;
-
-  border-radius: 9px;
-
-  min-height: 44px;
-
-  padding: 10px 18px;
-
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease;
-}
-
-.btn-novo:hover,
-.btn-salvar:hover,
-.botaoPrimario:hover {
-  transform: translateY(-1px);
+    rgba(255, 255, 255, 0.88);
 
   box-shadow:
-    0 7px 16px
-      rgba(237, 149, 0, 0.2);
-}
-
-/* ================================================= */
-/* TABELAS */
-/* ================================================= */
-
-.tabela-container {
-  width: 100%;
-
-  overflow-x: auto;
-
-  border-radius: 13px;
-
-  border: 1px solid #e1e6ed;
-
-  background: white;
-
-  box-shadow:
-    0 5px 20px
-      rgba(15, 23, 42, 0.05);
-}
-
-.tabela-container table {
-  width: 100%;
-
-  min-width: 760px;
-
-  border-collapse: collapse;
-}
-
-.tabela-container th {
-  background: #f7f8fa;
-
-  color: #667386;
-
-  font-size: 11px;
-
-  text-transform: uppercase;
-
-  letter-spacing: 0.4px;
-
-  padding: 13px;
-
-  text-align: left;
-}
-
-.tabela-container td {
-  color: #263246;
-
-  font-size: 13px;
-
-  padding: 14px;
-
-  border-top: 1px solid #edf0f4;
-}
-
-/* ================================================= */
-/* MOBILE */
-/* ================================================= */
-
-.mobile-menu-button,
-.mobile-close-button,
-.sidebar-overlay {
-  display: none;
-}
-
-@media (max-width: 900px) {
-
-  .app-sidebar {
-    width: 280px;
-
-    transform: translateX(-105%);
-
-    box-shadow:
-      15px 0 45px
-        rgba(0, 0, 0, 0.22);
-  }
-
-  .sidebar-recolhida {
-    width: 280px;
-  }
-
-  .sidebar-mobile-aberta {
-    transform: translateX(0);
-  }
-
-  .app-main,
-  .app-main-recolhido {
-    margin-left: 0;
-  }
-
-  .sidebar-collapse-button {
-    display: none;
-  }
-
-  .mobile-menu-button {
-    position: fixed;
-
-    top: 14px;
-    left: 14px;
-
-    width: 42px;
-    height: 42px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    border: 1px solid #e1e6ed;
-
-    border-radius: 10px;
-
-    background: white;
-
-    color: #172033;
-
-    box-shadow:
-      0 4px 15px
-        rgba(15, 23, 42, 0.1);
-
-    z-index: 950;
-  }
-
-  .mobile-close-button {
-    display: flex;
-
-    align-items: center;
-    justify-content: center;
-
-    margin-left: auto;
-
-    width: 38px;
-    height: 38px;
-
-    border: none;
-
-    border-radius: 9px;
-
-    background:
-      rgba(255, 255, 255, 0.07);
-
-    color: white;
-  }
-
-  .sidebar-overlay {
-    position: fixed;
-
-    inset: 0;
-
-    display: block;
-
-    width: 100%;
-    height: 100%;
-
-    border: none;
-
-    background:
-      rgba(5, 10, 18, 0.55);
-
-    z-index: 999;
-  }
-
-  .app-topbar {
-    height: 70px;
-
-    padding:
-      0 16px
-      0 72px;
-  }
-
-  .topbar-title,
-  .topbar-separator {
-    display: none;
-  }
-
-  .topbar-page {
-    font-size: 14px;
-  }
-
-  .topbar-mobile-brand {
-    display: block;
-
-    position: absolute;
-
-    left: 72px;
-
-    top: 15px;
-  }
-
-  .topbar-mobile-brand strong {
-    color: #172033;
-
-    font-size: 17px;
-  }
-
-  .topbar-mobile-brand span {
-    color: #ee9d0b;
-  }
-
-  .topbar-info {
-    display: none;
-  }
-
-  .topbar-right {
-    margin-left: auto;
-  }
-
-  .app-content {
-    padding: 20px 14px 35px;
-  }
-
-  .page-header {
-    flex-direction: column;
-
-    align-items: stretch;
-
-    gap: 14px;
-  }
-
-  .page-header h1 {
-    font-size: 25px !important;
-  }
-
-  .page-header p {
-    font-size: 12px !important;
-  }
-
-  .btn-novo {
-    width: 100%;
-
-    justify-content: center;
-  }
-
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .formulario-maquina {
-    padding: 16px !important;
-  }
-
-}
-
-/* ================================================= */
-/* CELULARES PEQUENOS */
-/* ================================================= */
-
-@media (max-width: 480px) {
-
-  .app-content {
-    padding:
-      16px 10px
-      30px;
-  }
-
-  .app-topbar {
-    padding-left: 66px;
-    padding-right: 12px;
-  }
-
-  .topbar-mobile-brand {
-    left: 66px;
-  }
-
-  .topbar-mobile-brand strong {
-    font-size: 16px;
-  }
-
-  .topbar-system {
-    font-size: 10px;
-  }
-
-  .page-header h1 {
-    font-size: 23px !important;
-  }
-
-  .formulario-maquina {
-    padding: 14px !important;
-  }
-
-  .form-grid {
-    gap: 11px;
-  }
-
-  .form-grid input,
-  .form-grid select,
-  .formulario input,
-  .formulario select {
-    height: 48px;
-
-    font-size: 14px;
-  }
-
-  .tabela-container {
-    border-radius: 10px;
-  }
-
-}
-
-/* ================================================= */
-/* IMPRESSÃO */
-/* ================================================= */
-
-@media print {
-
-  .app-sidebar,
-  .app-topbar,
-  .mobile-menu-button,
-  .mobile-close-button,
-  .sidebar-overlay {
-    display: none !important;
-  }
-
-  .app-main,
-  .app-main-recolhido {
-    margin: 0 !important;
-  }
-
-  .app-content {
-    padding: 0 !important;
-  }
-
-  body {
-    background: white !important;
-  }
-}
+    0 10px 30px
+      rgba(15, 23,
