@@ -1,588 +1,346 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
-type Equipamento = {
-  id: number;
-  nome: string;
-  modelo?: string;
-  fabricante?: string;
-  horimetro?: string;
-};
-
-type Foto = {
-  id: number;
+type FotoServico = {
+  id: string;
   imagem: string;
   descricao: string;
 };
 
-type Servico = {
-  id: number;
-  descricao: string;
-  fotos: Foto[];
-};
-
-type Manutencao = {
-  id: number;
-  equipamento_id: number;
-  maquina: string;
-  tipo: string;
-  mecanico: string;
+type HistoricoManutencao = {
+  id: string | number;
   data: string;
-  horimetro: string;
-  prioridade: string;
+  tipo: string;
+  descricao: string;
+  mecanico: string;
   status: string;
-  servicos: Servico[];
-  created_at?: string;
+  horimetro: string;
+  horasGastas?: string;
+  pecas?: string;
+  defeito?: string;
+  fotos: FotoServico[];
 };
 
-function comprimirImagem(arquivo: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const leitor = new FileReader();
-
-    leitor.onload = () => {
-      const imagem = new Image();
-
-      imagem.onload = () => {
-        const MAX_LARGURA = 1200;
-        const MAX_ALTURA = 1000;
-
-        let largura = imagem.width;
-        let altura = imagem.height;
-
-        if (largura > MAX_LARGURA) {
-          altura *= MAX_LARGURA / largura;
-          largura = MAX_LARGURA;
-        }
-
-        if (altura > MAX_ALTURA) {
-          largura *= MAX_ALTURA / altura;
-          altura = MAX_ALTURA;
-        }
-
-        const canvas = document.createElement("canvas");
-
-        canvas.width = largura;
-        canvas.height = altura;
-
-        const contexto = canvas.getContext("2d");
-
-        if (!contexto) {
-          reject(new Error("Erro ao processar imagem."));
-          return;
-        }
-
-        contexto.drawImage(
-          imagem,
-          0,
-          0,
-          largura,
-          altura
-        );
-
-        resolve(
-          canvas.toDataURL(
-            "image/jpeg",
-            0.65
-          )
-        );
-      };
-
-      imagem.onerror = () => {
-        reject(new Error("Erro ao carregar imagem."));
-      };
-
-      imagem.src = leitor.result as string;
-    };
-
-    leitor.onerror = () => {
-      reject(new Error("Erro ao ler imagem."));
-    };
-
-    leitor.readAsDataURL(arquivo);
-  });
-}
+type Equipamento = {
+  id: number;
+  nome: string;
+  modelo: string;
+  fabricante: string;
+  ano: string;
+  horimetro: string;
+  responsavel: string;
+  localizacao: string;
+  status: string;
+  proxima_manutencao: string;
+  historico: HistoricoManutencao[];
+};
 
 export default function ManutencaoPage() {
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
-  const [manutencoes, setManutencoes] = useState<Manutencao[]>([]);
+  const [equipamentoSelecionado, setEquipamentoSelecionado] =
+    useState<Equipamento | null>(null);
 
-  const [mostrarFormulario, setMostrarFormulario] =
-    useState(false);
+  const [tipo, setTipo] = useState("Preventiva");
+  const [data, setData] = useState("");
+  const [horimetro, setHorimetro] = useState("");
+  const [defeito, setDefeito] = useState("");
+  const [descricao, setDescricao] = useState("");
+  const [pecas, setPecas] = useState("");
+  const [horasGastas, setHorasGastas] = useState("");
+  const [mecanico, setMecanico] = useState("");
+  const [status, setStatus] = useState("Concluída");
 
-  const [equipamentoId, setEquipamentoId] =
-    useState("");
-
-  const [tipo, setTipo] =
-    useState("Preventiva");
-
-  const [mecanico, setMecanico] =
-    useState("");
-
-  const [data, setData] =
-    useState("");
-
-  const [horimetro, setHorimetro] =
-    useState("");
-
-  const [prioridade, setPrioridade] =
-    useState("Média");
-
-  const [status, setStatus] =
-    useState("Em Andamento");
-
-  const [servicos, setServicos] =
-    useState<Servico[]>([
-      {
-        id: Date.now(),
-        descricao: "",
-        fotos: [],
-      },
-    ]);
-
-  const [carregando, setCarregando] =
-    useState(true);
-
-  const [salvando, setSalvando] =
-    useState(false);
-
-  async function carregarDados() {
-    setCarregando(true);
-
-    const [
-      equipamentosResponse,
-      manutencoesResponse,
-    ] = await Promise.all([
-      supabase
-        .from("equipamentos")
-        .select("*")
-        .order("id", {
-          ascending: true,
-        }),
-
-      supabase
-        .from("manutencoes")
-        .select("*")
-        .order("id", {
-          ascending: false,
-        }),
-    ]);
-
-    if (equipamentosResponse.error) {
-      console.error(
-        "Erro equipamentos:",
-        equipamentosResponse.error
-      );
-      alert(
-        "Erro ao carregar equipamentos: " +
-          equipamentosResponse.error.message
-      );
-    } else {
-      setEquipamentos(
-        equipamentosResponse.data || []
-      );
-    }
-
-    if (manutencoesResponse.error) {
-      console.error(
-        "Erro manutenções:",
-        manutencoesResponse.error
-      );
-
-      alert(
-        "Erro ao carregar manutenções: " +
-          manutencoesResponse.error.message
-      );
-    } else {
-      setManutencoes(
-        manutencoesResponse.data || []
-      );
-    }
-
-    setCarregando(false);
-  }
+  const [fotos, setFotos] = useState<FotoServico[]>([]);
+  const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
-    carregarDados();
+    carregarEquipamentos();
   }, []);
 
-  function adicionarServico() {
-    setServicos((atual) => [
-      ...atual,
-      {
-        id:
-          Date.now() +
-          Math.floor(Math.random() * 100000),
-        descricao: "",
-        fotos: [],
-      },
-    ]);
-  }
+  async function carregarEquipamentos() {
+    const { data, error } = await supabase
+      .from("equipamentos")
+      .select("*")
+      .order("id", { ascending: true });
 
-  function removerServico(id: number) {
-    if (servicos.length === 1) {
-      alert(
-        "A manutenção precisa ter pelo menos um serviço."
-      );
+    if (error) {
+      console.error(error);
+      alert("Erro ao carregar equipamentos: " + error.message);
       return;
     }
 
-    setServicos((atual) =>
-      atual.filter(
-        (servico) => servico.id !== id
-      )
+    setEquipamentos(
+      (data || []).map((item: any) => ({
+        ...item,
+        historico: Array.isArray(item.historico)
+          ? item.historico
+          : [],
+      }))
     );
   }
 
-  function atualizarServico(
-    id: number,
-    descricao: string
-  ) {
-    setServicos((atual) =>
-      atual.map((servico) =>
-        servico.id === id
-          ? {
-              ...servico,
-              descricao,
-            }
-          : servico
-      )
+  function selecionarEquipamento(id: number) {
+    const equipamento = equipamentos.find(
+      (item) => item.id === id
     );
+
+    if (!equipamento) return;
+
+    setEquipamentoSelecionado(equipamento);
+
+    setTipo("Preventiva");
+    setData(new Date().toISOString().split("T")[0]);
+    setHorimetro(equipamento.horimetro || "");
+    setDefeito("");
+    setDescricao("");
+    setPecas("");
+    setHorasGastas("");
+    setMecanico("");
+    setStatus("Concluída");
+    setFotos([]);
   }
 
-  async function adicionarFoto(
-    servicoId: number,
-    evento: React.ChangeEvent<HTMLInputElement>
+  async function adicionarFotos(
+    event: React.ChangeEvent<HTMLInputElement>
   ) {
-    const arquivos = evento.target.files;
+    const arquivos = event.target.files;
 
-    if (!arquivos) return;
+    if (!arquivos || arquivos.length === 0) {
+      return;
+    }
 
-    try {
-      const novasFotos: Foto[] = [];
+    const novasFotos: FotoServico[] = [];
 
-      for (const arquivo of Array.from(arquivos)) {
-        if (!arquivo.type.startsWith("image/")) {
+    for (const arquivo of Array.from(arquivos)) {
+      try {
+        const extensao =
+          arquivo.name.split(".").pop() || "jpg";
+
+        const nomeArquivo =
+          `${crypto.randomUUID()}.${extensao}`;
+
+        const caminho =
+          `${equipamentoSelecionado?.id || "geral"}/${nomeArquivo}`;
+
+        const { error } = await supabase.storage
+          .from("fotos-manutencao")
+          .upload(caminho, arquivo, {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: arquivo.type,
+          });
+
+        if (error) {
+          console.error(error);
           alert(
-            "Selecione somente imagens."
+            "Erro ao enviar a foto: " +
+              error.message
           );
           continue;
         }
 
-        const imagem =
-          await comprimirImagem(arquivo);
+        const { data } = supabase.storage
+          .from("fotos-manutencao")
+          .getPublicUrl(caminho);
 
         novasFotos.push({
-          id:
-            Date.now() +
-            Math.floor(
-              Math.random() * 100000
-            ),
-          imagem,
+          id: crypto.randomUUID(),
+          imagem: data.publicUrl,
           descricao: "",
         });
+      } catch (error) {
+        console.error(error);
+        alert("Erro ao processar uma das fotos.");
       }
-
-      setServicos((atual) =>
-        atual.map((servico) =>
-          servico.id === servicoId
-            ? {
-                ...servico,
-                fotos: [
-                  ...servico.fotos,
-                  ...novasFotos,
-                ],
-              }
-            : servico
-        )
-      );
-    } catch (erro) {
-      console.error(erro);
-
-      alert(
-        "Não foi possível carregar a foto."
-      );
     }
 
-    evento.target.value = "";
+    setFotos((atual) => [
+      ...atual,
+      ...novasFotos,
+    ]);
+
+    event.target.value = "";
   }
 
   function atualizarDescricaoFoto(
-    servicoId: number,
-    fotoId: number,
-    descricao: string
+    id: string,
+    descricaoNova: string
   ) {
-    setServicos((atual) =>
-      atual.map((servico) => {
-        if (servico.id !== servicoId) {
-          return servico;
-        }
-
-        return {
-          ...servico,
-
-          fotos: servico.fotos.map(
-            (foto) =>
-              foto.id === fotoId
-                ? {
-                    ...foto,
-                    descricao,
-                  }
-                : foto
-          ),
-        };
-      })
-    );
-  }
-
-  function removerFoto(
-    servicoId: number,
-    fotoId: number
-  ) {
-    setServicos((atual) =>
-      atual.map((servico) =>
-        servico.id === servicoId
+    setFotos((atual) =>
+      atual.map((foto) =>
+        foto.id === id
           ? {
-              ...servico,
-              fotos:
-                servico.fotos.filter(
-                  (foto) =>
-                    foto.id !== fotoId
-                ),
+              ...foto,
+              descricao: descricaoNova,
             }
-          : servico
+          : foto
       )
     );
   }
 
-  function limparFormulario() {
-    setEquipamentoId("");
-    setTipo("Preventiva");
-    setMecanico("");
-    setData("");
-    setHorimetro("");
-    setPrioridade("Média");
-    setStatus("Em Andamento");
+  async function removerFoto(foto: FotoServico) {
+    try {
+      const url = new URL(foto.imagem);
 
-    setServicos([
-      {
-        id: Date.now(),
-        descricao: "",
-        fotos: [],
-      },
-    ]);
+      const partes =
+        url.pathname.split(
+          "/fotos-manutencao/"
+        );
+
+      if (partes[1]) {
+        await supabase.storage
+          .from("fotos-manutencao")
+          .remove([decodeURIComponent(partes[1])]);
+      }
+    } catch (error) {
+      console.error(
+        "Erro ao remover arquivo:",
+        error
+      );
+    }
+
+    setFotos((atual) =>
+      atual.filter(
+        (item) => item.id !== foto.id
+      )
+    );
   }
 
   async function salvarManutencao() {
-    const servicosValidos =
-      servicos.filter(
-        (servico) =>
-          servico.descricao.trim().length > 0
-      );
-
-    if (!equipamentoId) {
-      alert(
-        "Selecione o equipamento."
-      );
-      return;
-    }
-
-    if (!mecanico.trim()) {
-      alert(
-        "Informe o mecânico responsável."
-      );
+    if (!equipamentoSelecionado) {
+      alert("Selecione um equipamento.");
       return;
     }
 
     if (!data) {
-      alert(
-        "Informe a data da manutenção."
-      );
+      alert("Informe a data da manutenção.");
       return;
     }
 
-    if (servicosValidos.length === 0) {
-      alert(
-        "Adicione pelo menos um serviço executado."
-      );
+    if (!descricao.trim()) {
+      alert("Informe os serviços executados.");
       return;
     }
 
-    const equipamento =
-      equipamentos.find(
-        (item) =>
-          item.id.toString() ===
-          equipamentoId
-      );
-
-    if (!equipamento) {
-      alert(
-        "Equipamento não encontrado."
-      );
+    if (!mecanico.trim()) {
+      alert("Informe o mecânico responsável.");
       return;
     }
 
     setSalvando(true);
 
-    const nomeMaquina =
-      equipamento.nome;
+    try {
+      const novaManutencao: HistoricoManutencao = {
+        id: crypto.randomUUID(),
+        data,
+        tipo,
+        descricao,
+        mecanico,
+        status,
+        horimetro:
+          horimetro ||
+          equipamentoSelecionado.horimetro ||
+          "",
+        horasGastas,
+        pecas,
+        defeito,
+        fotos,
+      };
 
-    const horimetroFinal =
-      horimetro.trim()
-        ? `${horimetro.trim()} h`
-        : equipamento.horimetro || "-";
+      const historicoAtual =
+        Array.isArray(
+          equipamentoSelecionado.historico
+        )
+          ? equipamentoSelecionado.historico
+          : [];
 
-    const { error } =
-      await supabase
-        .from("manutencoes")
-        .insert([
-          {
-            equipamento_id:
-              equipamento.id,
+      const novoHistorico = [
+        ...historicoAtual,
+        novaManutencao,
+      ];
 
-            maquina:
-              nomeMaquina,
+      const novoHorimetro =
+        horimetro ||
+        equipamentoSelecionado.horimetro;
 
-            tipo,
-
-            mecanico:
-              mecanico.trim(),
-
-            data,
-
-            horimetro:
-              horimetroFinal,
-
-            prioridade,
-
-            status,
-
-            servicos:
-              servicosValidos,
-          },
-        ]);
-
-    if (error) {
-      console.error(
-        "Erro ao salvar:",
-        error
-      );
-
-      alert(
-        "Erro ao salvar manutenção:\n" +
-          error.message
-      );
-
-      setSalvando(false);
-      return;
-    }
-
-    // Atualiza o horímetro do equipamento
-    if (horimetro.trim()) {
-      const { error: erroHorimetro } =
+      const { data: equipamentoAtualizado, error } =
         await supabase
           .from("equipamentos")
           .update({
-            horimetro:
-              horimetroFinal,
+            horimetro: novoHorimetro,
+            historico: novoHistorico,
           })
           .eq(
             "id",
-            equipamento.id
-          );
+            equipamentoSelecionado.id
+          )
+          .select()
+          .single();
 
-      if (erroHorimetro) {
-        console.error(
-          "Erro ao atualizar horímetro:",
-          erroHorimetro
+      if (error) {
+        console.error(error);
+
+        alert(
+          "Erro ao salvar a manutenção no banco:\n" +
+            error.message
         );
+
+        return;
       }
-    }
 
-    limparFormulario();
+      const equipamentoFinal =
+        equipamentoAtualizado as Equipamento;
 
-    setMostrarFormulario(false);
+      setEquipamentos((atual) =>
+        atual.map((item) =>
+          item.id === equipamentoFinal.id
+            ? equipamentoFinal
+            : item
+        )
+      );
 
-    await carregarDados();
+      setEquipamentoSelecionado(
+        equipamentoFinal
+      );
 
-    setSalvando(false);
+      setTipo("Preventiva");
+      setData(
+        new Date()
+          .toISOString()
+          .split("T")[0]
+      );
+      setHorimetro(
+        equipamentoFinal.horimetro || ""
+      );
+      setDefeito("");
+      setDescricao("");
+      setPecas("");
+      setHorasGastas("");
+      setMecanico("");
+      setStatus("Concluída");
+      setFotos([]);
 
-    alert(
-      "Manutenção registrada com sucesso!"
-    );
-  }
-
-  async function concluirManutencao(
-    id: number
-  ) {
-    const { error } =
-      await supabase
-        .from("manutencoes")
-        .update({
-          status: "Concluída",
-        })
-        .eq("id", id);
-
-    if (error) {
       alert(
-        "Erro ao concluir: " +
-          error.message
+        "Manutenção e fotos salvas com sucesso!"
       );
-      return;
+    } finally {
+      setSalvando(false);
     }
-
-    carregarDados();
-  }
-
-  async function excluirManutencao(
-    id: number
-  ) {
-    if (
-      !confirm(
-        "Deseja realmente excluir esta manutenção?"
-      )
-    ) {
-      return;
-    }
-
-    const { error } =
-      await supabase
-        .from("manutencoes")
-        .delete()
-        .eq("id", id);
-
-    if (error) {
-      alert(
-        "Erro ao excluir: " +
-          error.message
-      );
-      return;
-    }
-
-    carregarDados();
-  }
-
-  function nomeEquipamento(
-    id: number
-  ) {
-    const equipamento =
-      equipamentos.find(
-        (item) =>
-          item.id === id
-      );
-
-    return (
-      equipamento?.nome ||
-      "Equipamento"
-    );
   }
 
   return (
-    <main className="mastermec-app">
-      <section className="page-container">
-
+    <main className="Robert-app">
+      <div
+        className="page-container"
+        style={{
+          maxWidth: "1400px",
+          margin: "0 auto",
+          padding: "30px",
+        }}
+      >
         <Link
           href="/"
           className="voltar"
@@ -590,564 +348,645 @@ export default function ManutencaoPage() {
           ← Voltar ao Dashboard
         </Link>
 
-        <div className="page-header">
+        <header className="page-header">
           <div>
-            <h1>
-              🔧 Manutenção
-            </h1>
-
+            <h1>🔧 Manutenção</h1>
             <p>
-              Controle completo das
-              manutenções da frota
+              Registro de manutenção,
+              serviços executados e fotos.
             </p>
           </div>
+        </header>
 
-          <button
-            className="btn-novo"
-            onClick={() =>
-              setMostrarFormulario(
-                !mostrarFormulario
-              )
-            }
+        {!equipamentoSelecionado ? (
+          <section
+            className="painel"
+            style={{
+              padding: "25px",
+            }}
           >
-            {mostrarFormulario
-              ? "Fechar"
-              : "+ Nova Manutenção"}
-          </button>
-        </div>
-
-        {mostrarFormulario && (
-          <div className="formulario-maquina">
-
             <h2>
-              Nova Manutenção
+              Selecione o equipamento
             </h2>
 
-            <div className="form-grid">
+            <p
+              style={{
+                marginBottom: "25px",
+                opacity: 0.8,
+              }}
+            >
+              Os equipamentos abaixo são
+              carregados diretamente do
+              Supabase.
+            </p>
 
-              <select
-                value={equipamentoId}
-                onChange={(e) =>
-                  setEquipamentoId(
-                    e.target.value
-                  )
-                }
-              >
-                <option value="">
-                  Selecione o equipamento
-                </option>
-
-                {equipamentos.map(
-                  (equipamento) => (
-                    <option
-                      key={
-                        equipamento.id
-                      }
-                      value={
-                        equipamento.id
-                      }
-                    >
-                      {equipamento.nome}
-                      {" — "}
-                      {equipamento.fabricante ||
-                        ""}
-                      {" "}
-                      {equipamento.modelo ||
-                        ""}
-                    </option>
-                  )
-                )}
-              </select>
-
-              <select
-                value={tipo}
-                onChange={(e) =>
-                  setTipo(
-                    e.target.value
-                  )
-                }
-              >
-                <option>
-                  Preventiva
-                </option>
-
-                <option>
-                  Corretiva
-                </option>
-
-                <option>
-                  Emergencial
-                </option>
-
-                <option>
-                  Inspeção
-                </option>
-              </select>
-
-              <input
-                type="text"
-                placeholder="Mecânico responsável"
-                value={mecanico}
-                onChange={(e) =>
-                  setMecanico(
-                    e.target.value
-                  )
-                }
-              />
-
-              <input
-                type="date"
-                value={data}
-                onChange={(e) =>
-                  setData(
-                    e.target.value
-                  )
-                }
-              />
-
-              <input
-                type="number"
-                placeholder="Horímetro"
-                value={horimetro}
-                onChange={(e) =>
-                  setHorimetro(
-                    e.target.value
-                  )
-                }
-              />
-
-              <select
-                value={prioridade}
-                onChange={(e) =>
-                  setPrioridade(
-                    e.target.value
-                  )
-                }
-              >
-                <option>
-                  Baixa
-                </option>
-
-                <option>
-                  Média
-                </option>
-
-                <option>
-                  Alta
-                </option>
-
-                <option>
-                  Urgente
-                </option>
-              </select>
-
-              <select
-                value={status}
-                onChange={(e) =>
-                  setStatus(
-                    e.target.value
-                  )
-                }
-              >
-                <option>
-                  Em Andamento
-                </option>
-
-                <option>
-                  Concluída
-                </option>
-
-                <option>
-                  Cancelada
-                </option>
-              </select>
-
-            </div>
-
-            <div className="servicos-container">
-
-              <div className="servicos-cabecalho">
-
-                <div>
-                  <h3>
-                    🔧 Serviços Executados
-                  </h3>
-
-                  <p>
-                    Registre cada serviço
-                    separadamente.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  className="btn-adicionar-servico"
-                  onClick={
-                    adicionarServico
-                  }
-                >
-                  ＋ Adicionar Serviço
-                </button>
-
-              </div>
-
-              {servicos.map(
-                (
-                  servico,
-                  index
-                ) => (
-
-                  <div
-                    className="servico-card"
-                    key={
-                      servico.id
-                    }
-                  >
-
-                    <div className="servico-topo">
-
-                      <h4>
-                        Serviço{" "}
-                        {index + 1}
-                      </h4>
-
-                      {servicos.length >
-                        1 && (
-                        <button
-                          type="button"
-                          className="btn-remover-servico"
-                          onClick={() =>
-                            removerServico(
-                              servico.id
-                            )
-                          }
-                        >
-                          🗑️ Remover
-                        </button>
-                      )}
-
-                    </div>
-
-                    <label>
-                      Descrição do serviço
-                    </label>
-
-                    <textarea
-                      className="textarea-servico"
-                      value={
-                        servico.descricao
-                      }
-                      onChange={(e) =>
-                        atualizarServico(
-                          servico.id,
-                          e.target.value
-                        )
-                      }
-                      placeholder="Descreva detalhadamente o serviço executado..."
-                    />
-
-                    <div className="fotos-servico">
-
-                      <div className="fotos-titulo">
-
-                        <div>
-                          <strong>
-                            📷 Fotos
-                          </strong>
-
-                          <small>
-                            Adicione as fotos
-                            deste serviço.
-                          </small>
-                        </div>
-
-                        <label className="btn-adicionar-foto">
-
-                          📷 Adicionar Foto
-
-                          <input
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            onChange={(e) =>
-                              adicionarFoto(
-                                servico.id,
-                                e
-                              )
-                            }
-                          />
-
-                        </label>
-
-                      </div>
-
-                      {servico.fotos.length >
-                        0 && (
-
-                        <div className="fotos-grid">
-
-                          {servico.fotos.map(
-                            (foto) => (
-
-                              <div
-                                className="foto-edicao"
-                                key={
-                                  foto.id
-                                }
-                              >
-
-                                <img
-                                  src={
-                                    foto.imagem
-                                  }
-                                  alt="Foto do serviço"
-                                />
-
-                                <textarea
-                                  value={
-                                    foto.descricao
-                                  }
-                                  onChange={(e) =>
-                                    atualizarDescricaoFoto(
-                                      servico.id,
-                                      foto.id,
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder="Descrição da foto..."
-                                />
-
-                                <button
-                                  type="button"
-                                  className="btn-remover-foto"
-                                  onClick={() =>
-                                    removerFoto(
-                                      servico.id,
-                                      foto.id
-                                    )
-                                  }
-                                >
-                                  🗑️ Remover foto
-                                </button>
-
-                              </div>
-
-                            )
-                          )}
-
-                        </div>
-                      )}
-
-                    </div>
-
-                  </div>
-                )
-              )}
-
-            </div>
-
-            <div className="form-botoes">
-
-              <button
-                className="btn-cancelar"
-                onClick={() => {
-                  limparFormulario();
-                  setMostrarFormulario(
-                    false
-                  );
+            {equipamentos.length === 0 ? (
+              <p>
+                Nenhum equipamento cadastrado.
+              </p>
+            ) : (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns:
+                    "repeat(auto-fit, minmax(260px, 1fr))",
+                  gap: "18px",
                 }}
               >
-                Cancelar
-              </button>
+                {equipamentos.map(
+                  (equipamento) => (
+                    <button
+                      key={equipamento.id}
+                      type="button"
+                      onClick={() =>
+                        selecionarEquipamento(
+                          equipamento.id
+                        )
+                      }
+                      style={{
+                        textAlign: "left",
+                        padding: "22px",
+                        borderRadius: "14px",
+                        border:
+                          "1px solid rgba(255,255,255,.15)",
+                        background:
+                          "rgba(255,255,255,.05)",
+                        color: "inherit",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "32px",
+                          marginBottom: "10px",
+                        }}
+                      >
+                        🚜
+                      </div>
+
+                      <strong
+                        style={{
+                          display: "block",
+                          fontSize: "18px",
+                          marginBottom: "6px",
+                        }}
+                      >
+                        {equipamento.nome}
+                      </strong>
+
+                      <span
+                        style={{
+                          display: "block",
+                          opacity: 0.8,
+                        }}
+                      >
+                        {equipamento.fabricante}{" "}
+                        {equipamento.modelo}
+                      </span>
+
+                      <span
+                        style={{
+                          display: "block",
+                          marginTop: "8px",
+                          fontSize: "13px",
+                        }}
+                      >
+                        Horímetro:{" "}
+                        {equipamento.horimetro ||
+                          "-"}{" "}
+                        h
+                      </span>
+
+                      <span
+                        style={{
+                          display: "block",
+                          marginTop: "5px",
+                          fontSize: "13px",
+                        }}
+                      >
+                        Histórico:{" "}
+                        {Array.isArray(
+                          equipamento.historico
+                        )
+                          ? equipamento.historico
+                              .length
+                          : 0}{" "}
+                        registro(s)
+                      </span>
+                    </button>
+                  )
+                )}
+              </div>
+            )}
+          </section>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() =>
+                setEquipamentoSelecionado(
+                  null
+                )
+              }
+              className="voltar"
+              style={{
+                marginBottom: "20px",
+              }}
+            >
+              ← Escolher outro equipamento
+            </button>
+
+            <section
+              className="painel"
+              style={{
+                padding: "25px",
+              }}
+            >
+              <h2>
+                🚜{" "}
+                {equipamentoSelecionado.nome}
+              </h2>
+
+              <p>
+                {equipamentoSelecionado.fabricante}{" "}
+                {equipamentoSelecionado.modelo}
+              </p>
+
+              <p>
+                Horímetro atual:{" "}
+                <strong>
+                  {
+                    equipamentoSelecionado.horimetro
+                  }{" "}
+                  h
+                </strong>
+              </p>
+            </section>
+
+            <section
+              className="painel"
+              style={{
+                marginTop: "20px",
+                padding: "25px",
+              }}
+            >
+              <h2>
+                Registrar manutenção
+              </h2>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns:
+                    "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: "18px",
+                  marginTop: "20px",
+                }}
+              >
+                <label>
+                  Tipo de manutenção
+                  <select
+                    value={tipo}
+                    onChange={(e) =>
+                      setTipo(e.target.value)
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      marginTop: "6px",
+                    }}
+                  >
+                    <option>
+                      Preventiva
+                    </option>
+                    <option>
+                      Corretiva
+                    </option>
+                  </select>
+                </label>
+
+                <label>
+                  Data
+                  <input
+                    type="date"
+                    value={data}
+                    onChange={(e) =>
+                      setData(e.target.value)
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      marginTop: "6px",
+                    }}
+                  />
+                </label>
+
+                <label>
+                  Horímetro
+                  <input
+                    type="number"
+                    value={horimetro}
+                    onChange={(e) =>
+                      setHorimetro(
+                        e.target.value
+                      )
+                    }
+                    placeholder="Ex: 6250"
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      marginTop: "6px",
+                    }}
+                  />
+                </label>
+
+                <label>
+                  Mecânico responsável
+                  <input
+                    value={mecanico}
+                    onChange={(e) =>
+                      setMecanico(
+                        e.target.value
+                      )
+                    }
+                    placeholder="Nome do mecânico"
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      marginTop: "6px",
+                    }}
+                  />
+                </label>
+
+                <label>
+                  Status
+                  <select
+                    value={status}
+                    onChange={(e) =>
+                      setStatus(e.target.value)
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      marginTop: "6px",
+                    }}
+                  >
+                    <option>
+                      Concluída
+                    </option>
+                    <option>
+                      Em Andamento
+                    </option>
+                    <option>
+                      Aguardando peças
+                    </option>
+                  </select>
+                </label>
+
+                <label>
+                  Horas trabalhadas
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={horasGastas}
+                    onChange={(e) =>
+                      setHorasGastas(
+                        e.target.value
+                      )
+                    }
+                    placeholder="Ex: 4.5"
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      marginTop: "6px",
+                    }}
+                  />
+                </label>
+              </div>
+
+              <label
+                style={{
+                  display: "block",
+                  marginTop: "20px",
+                }}
+              >
+                Defeito relatado
+                <textarea
+                  value={defeito}
+                  onChange={(e) =>
+                    setDefeito(
+                      e.target.value
+                    )
+                  }
+                  placeholder="Descreva o defeito informado..."
+                  style={{
+                    width: "100%",
+                    minHeight: "100px",
+                    padding: "12px",
+                    marginTop: "6px",
+                  }}
+                />
+              </label>
+
+              <label
+                style={{
+                  display: "block",
+                  marginTop: "20px",
+                }}
+              >
+                Serviços executados
+                <textarea
+                  value={descricao}
+                  onChange={(e) =>
+                    setDescricao(
+                      e.target.value
+                    )
+                  }
+                  placeholder="Descreva detalhadamente tudo que foi realizado..."
+                  style={{
+                    width: "100%",
+                    minHeight: "140px",
+                    padding: "12px",
+                    marginTop: "6px",
+                  }}
+                />
+              </label>
+
+              <label
+                style={{
+                  display: "block",
+                  marginTop: "20px",
+                }}
+              >
+                Peças utilizadas
+                <textarea
+                  value={pecas}
+                  onChange={(e) =>
+                    setPecas(
+                      e.target.value
+                    )
+                  }
+                  placeholder="Liste peças, filtros, componentes e materiais..."
+                  style={{
+                    width: "100%",
+                    minHeight: "100px",
+                    padding: "12px",
+                    marginTop: "6px",
+                  }}
+                />
+              </label>
+
+              <div
+                style={{
+                  marginTop: "25px",
+                  padding: "20px",
+                  border:
+                    "1px solid rgba(255,255,255,.15)",
+                  borderRadius: "14px",
+                }}
+              >
+                <h3>
+                  📷 Fotos do serviço
+                </h3>
+
+                <p
+                  style={{
+                    opacity: 0.75,
+                    marginBottom: "15px",
+                  }}
+                >
+                  As fotos serão enviadas
+                  diretamente para o
+                  Supabase.
+                </p>
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={
+                    adicionarFotos
+                  }
+                />
+
+                {fotos.length > 0 && (
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(230px, 1fr))",
+                      gap: "20px",
+                      marginTop: "20px",
+                    }}
+                  >
+                    {fotos.map((foto) => (
+                      <div
+                        key={foto.id}
+                        style={{
+                          padding: "12px",
+                          border:
+                            "1px solid rgba(255,255,255,.15)",
+                          borderRadius: "12px",
+                        }}
+                      >
+                        <img
+                          src={foto.imagem}
+                          alt="Foto da manutenção"
+                          style={{
+                            width: "100%",
+                            height: "180px",
+                            objectFit:
+                              "cover",
+                            borderRadius: "8px",
+                            display: "block",
+                          }}
+                        />
+
+                        <textarea
+                          value={
+                            foto.descricao
+                          }
+                          onChange={(e) =>
+                            atualizarDescricaoFoto(
+                              foto.id,
+                              e.target.value
+                            )
+                          }
+                          placeholder="Descrição desta foto..."
+                          style={{
+                            width: "100%",
+                            minHeight: "80px",
+                            marginTop: "10px",
+                            padding: "10px",
+                          }}
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            removerFoto(
+                              foto
+                            )
+                          }
+                          style={{
+                            marginTop: "8px",
+                            padding:
+                              "8px 12px",
+                          }}
+                        >
+                          🗑️ Remover foto
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <button
-                className="btn-salvar"
+                type="button"
                 onClick={
                   salvarManutencao
                 }
                 disabled={salvando}
+                className="botao-principal"
+                style={{
+                  marginTop: "25px",
+                  padding: "15px 25px",
+                }}
               >
                 {salvando
                   ? "Salvando..."
-                  : "Registrar Manutenção"}
+                  : "💾 Salvar Manutenção"}
               </button>
+            </section>
 
-            </div>
-
-          </div>
-        )}
-
-        <div className="tabela-container">
-
-          {carregando ? (
-            <p
+            <section
+              className="painel"
               style={{
-                padding: "30px",
-                textAlign: "center",
+                marginTop: "20px",
+                padding: "25px",
               }}
             >
-              Carregando manutenções...
-            </p>
-          ) : (
-            <table>
+              <h2>
+                📋 Histórico da máquina
+              </h2>
 
-              <thead>
-                <tr>
-                  <th>
-                    Máquina
-                  </th>
-
-                  <th>
-                    Tipo
-                  </th>
-
-                  <th>
-                    Serviços
-                  </th>
-
-                  <th>
-                    Mecânico
-                  </th>
-
-                  <th>
-                    Data
-                  </th>
-
-                  <th>
-                    Prioridade
-                  </th>
-
-                  <th>
-                    Status
-                  </th>
-
-                  <th>
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody>
-
-                {manutencoes.length ===
-                0 ? (
-                  <tr>
-                    <td
-                      colSpan={8}
+              {(
+                equipamentoSelecionado.historico ||
+                []
+              ).length === 0 ? (
+                <p>
+                  Nenhuma manutenção
+                  registrada.
+                </p>
+              ) : (
+                [
+                  ...equipamentoSelecionado.historico,
+                ]
+                  .reverse()
+                  .map((manutencao) => (
+                    <div
+                      key={manutencao.id}
                       style={{
-                        textAlign:
-                          "center",
-                        padding:
-                          "40px",
+                        marginTop: "20px",
+                        padding: "20px",
+                        border:
+                          "1px solid rgba(255,255,255,.15)",
+                        borderRadius: "12px",
                       }}
                     >
-                      Nenhuma manutenção
-                      registrada.
-                    </td>
-                  </tr>
-                ) : (
-                  manutencoes.map(
-                    (manutencao) => (
+                      <h3>
+                        {manutencao.tipo}
+                      </h3>
 
-                      <tr
-                        key={
-                          manutencao.id
+                      <p>
+                        <strong>
+                          Data:
+                        </strong>{" "}
+                        {manutencao.data}
+                      </p>
+
+                      <p>
+                        <strong>
+                          Mecânico:
+                        </strong>{" "}
+                        {
+                          manutencao.mecanico
                         }
-                      >
+                      </p>
 
-                        <td>
-                          🚜{" "}
-                          {nomeEquipamento(
-                            manutencao.equipamento_id
-                          )}
-                        </td>
+                      <p>
+                        <strong>
+                          Serviço:
+                        </strong>{" "}
+                        {
+                          manutencao.descricao
+                        }
+                      </p>
 
-                        <td>
-                          {manutencao.tipo}
-                        </td>
-
-                        <td>
-                          {Array.isArray(
-                            manutencao.servicos
-                          )
-                            ? manutencao.servicos
-                                .length
-                            : 0}{" "}
-                          serviço(s)
-                        </td>
-
-                        <td>
-                          {
-                            manutencao.mecanico
-                          }
-                        </td>
-
-                        <td>
-                          {manutencao.data}
-                        </td>
-
-                        <td>
-                          {
-                            manutencao.prioridade
-                          }
-                        </td>
-
-                        <td>
-                          {
-                            manutencao.status
-                          }
-                        </td>
-
-                        <td
+                      {manutencao.fotos?.length >
+                        0 && (
+                        <div
                           style={{
                             display:
-                              "flex",
-                            gap: "6px",
+                              "grid",
+                            gridTemplateColumns:
+                              "repeat(auto-fit, minmax(180px, 1fr))",
+                            gap: "15px",
+                            marginTop:
+                              "15px",
                           }}
                         >
+                          {manutencao.fotos.map(
+                            (foto) => (
+                              <div
+                                key={
+                                  foto.id
+                                }
+                              >
+                                <img
+                                  src={
+                                    foto.imagem
+                                  }
+                                  alt={
+                                    foto.descricao
+                                  }
+                                  style={{
+                                    width:
+                                      "100%",
+                                    height:
+                                      "150px",
+                                    objectFit:
+                                      "cover",
+                                    borderRadius:
+                                      "8px",
+                                  }}
+                                />
 
-                          {manutencao.status !==
-                            "Concluída" && (
-                            <button
-                              className="btn-editar"
-                              onClick={() =>
-                                concluirManutencao(
-                                  manutencao.id
-                                )
-                              }
-                              title="Concluir"
-                            >
-                              ✅
-                            </button>
+                                {foto.descricao && (
+                                  <p
+                                    style={{
+                                      fontSize:
+                                        "13px",
+                                    }}
+                                  >
+                                    {
+                                      foto.descricao
+                                    }
+                                  </p>
+                                )}
+                              </div>
+                            )
                           )}
-
-                          <button
-                            className="btn-excluir"
-                            onClick={() =>
-                              excluirManutencao(
-                                manutencao.id
-                              )
-                            }
-                            title="Excluir"
-                          >
-                            🗑
-                          </button>
-
-                        </td>
-
-                      </tr>
-                    )
-                  )
-                )}
-
-              </tbody>
-
-            </table>
-          )}
-
-        </div>
-
-      </section>
+                        </div>
+                      )}
+                    </div>
+                  ))
+              )}
+            </section>
+          </>
+        )}
+      </div>
     </main>
   );
 }
