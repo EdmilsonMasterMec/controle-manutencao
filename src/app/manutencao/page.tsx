@@ -468,4 +468,56 @@ export default function Manutencao() {
 
     if (!equipamentoId) {
       alert(
-        "Sele
+        "Selecione o equipamento."
+      );
+
+      return;
+    }
+
+    if (!mecanico.trim()) {
+      alert(
+        "Informe o mecânico responsável."
+      );
+
+      return;
+    }
+
+    if (!data) {
+      alert(
+        "Informe a data da manutenção."
+      );
+
+      return;
+    }
+
+    const servicosValidos =
+      servicos
+        .map((servico) => ({
+          ...servico,
+
+          descricao:
+            servico.descricao.trim(),
+
+          fotos: servico.fotos.map(
+            (foto) => ({
+              ...foto,
+
+              descricao:
+                foto.descricao.trim(),
+            })
+          ),
+        }))
+        .filter(
+          (servico) =>
+            servico.descricao.length > 0
+        );
+
+    if (
+      servicosValidos.length === 0
+    ) {
+      alert(
+        "Adicione pelo menos um serviço executado."
+      );
+
+      return;
+   
