@@ -1394,6 +1394,8 @@ return (
   </section>  
 </main>
 
-);
+  );
 }
+
+// Página de manutenção revisada - MasterMec
 
