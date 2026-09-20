@@ -1397,4 +1397,3 @@ return (
 );
 }
 
-Eu fiz o download, usa esse arquivo, pois é mais fácil pra mim.
