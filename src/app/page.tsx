@@ -41,18 +41,49 @@ type Manutencao = {
   status: string;
 };
 
+function normalizarStatus(status: string | null | undefined) {
+  return String(status || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function formatarData(data: string | null | undefined) {
+  if (!data) return "-";
+
+  const dataObj = new Date(data);
+
+  if (Number.isNaN(dataObj.getTime())) {
+    return data;
+  }
+
+  return dataObj.toLocaleDateString("pt-BR");
+}
+
+function formatarStatus(status: string | null | undefined) {
+  const normalizado = normalizarStatus(status);
+
+  if (normalizado === "operando") {
+    return "Operando";
+  }
+
+  if (normalizado === "em manutencao") {
+    return "Em Manutenção";
+  }
+
+  if (normalizado === "parada") {
+    return "Parada";
+  }
+
+  return status || "-";
+}
+
 export default function DashboardPage() {
-  const [equipamentos, setEquipamentos] = useState<
-    Equipamento[]
-  >([]);
-
-  const [manutencoes, setManutencoes] = useState<
-    Manutencao[]
-  >([]);
-
-  const [carregando, setCarregando] =
-    useState(true);
-
+  const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
+  const [manutencoes, setManutencoes] = useState<Manutencao[]>([]);
+  const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
 
   useEffect(() => {
@@ -64,10 +95,6 @@ export default function DashboardPage() {
     setErro("");
 
     try {
-      // =====================================================
-      // EQUIPAMENTOS
-      // =====================================================
-
       const equipamentosResult = await supabase
         .from("equipamentos")
         .select(`
@@ -103,13 +130,8 @@ export default function DashboardPage() {
       }
 
       setEquipamentos(
-        (equipamentosResult.data ||
-          []) as Equipamento[]
+        (equipamentosResult.data || []) as Equipamento[]
       );
-
-      // =====================================================
-      // MANUTENÇÕES
-      // =====================================================
 
       const manutencoesResult = await supabase
         .from("manutencoes")
@@ -134,13 +156,10 @@ export default function DashboardPage() {
           manutencoesResult.error
         );
 
-        // Não interrompe o Dashboard.
-        // Os dados dos equipamentos continuam aparecendo.
         setManutencoes([]);
       } else {
         setManutencoes(
-          (manutencoesResult.data ||
-            []) as Manutencao[]
+          (manutencoesResult.data || []) as Manutencao[]
         );
       }
     } catch (error) {
@@ -157,102 +176,45 @@ export default function DashboardPage() {
     }
   }
 
-  // =======================================================
+  // =====================================================
   // CONTADORES
-  // =======================================================
+  // =====================================================
 
-  const totalEquipamentos =
-    equipamentos.length;
+  const totalEquipamentos = equipamentos.length;
 
   const operando = equipamentos.filter(
     (equipamento) =>
-      normalizarStatus(
-        equipamento.status
-      ) === "operando"
+      normalizarStatus(equipamento.status) === "operando"
   ).length;
 
-  const emManutencao =
-    equipamentos.filter(
-      (equipamento) =>
-        normalizarStatus(
-          equipamento.status
-        ) === "em manutencao"
-    ).length;
+  const emManutencao = equipamentos.filter(
+    (equipamento) =>
+      normalizarStatus(equipamento.status) === "em manutencao"
+  ).length;
 
   const paradas = equipamentos.filter(
     (equipamento) =>
-      normalizarStatus(
-        equipamento.status
-      ) === "parada"
+      normalizarStatus(equipamento.status) === "parada"
   ).length;
 
-  // =======================================================
+  const manutencoesAtivas = manutencoes.filter((manutencao) => {
+    const status = normalizarStatus(manutencao.status);
+
+    return (
+      status === "em andamento" ||
+      status === "aberta" ||
+      status === "aberto" ||
+      status === "pendente"
+    );
+  }).length;
+
+  // =====================================================
   // PRÓXIMAS MANUTENÇÕES
-  // =======================================================
+  // =====================================================
 
-  const proximasManutencoes =
-    useMemo(() => {
-      const hoje = new Date();
+  const proximasManutencoes = useMemo(() => {
+    const hoje = new Date();
 
-      return equipamentos
-        .filter(
-          (equipamento) =>
-            equipamento.proxima_manutencao
-        )
-        .sort((a, b) => {
-          const dataA =
-            new Date(
-              a.proxima_manutencao as string
-            ).getTime();
-
-          const dataB =
-            new Date(
-              b.proxima_manutencao as string
-            ).getTime();
-
-          return dataA - dataB;
-        })
-        .slice(0, 5)
-        .map((equipamento) => {
-          const data =
-            new Date(
-              equipamento.proxima_manutencao as string
-            );
-
-          const diferenca =
-            Math.ceil(
-              (data.getTime() -
-                hoje.getTime()) /
-                (1000 * 60 * 60 * 24)
-            );
-
-          return {
-            ...equipamento,
-            dias: diferenca,
-          };
-        });
-    }, [equipamentos]);
-
-  // =======================================================
-  // EQUIPAMENTOS EM MANUTENÇÃO
-  // =======================================================
-
-  const equipamentosEmManutencao =
-    useMemo(() => {
-      return equipamentos
-        .filter(
-          (equipamento) =>
-            normalizarStatus(
-              equipamento.status
-            ) === "em manutencao"
-        )
-        .slice(0, 5);
-    }, [equipamentos]);
-
-  // =======================================================
-  // ÚLTIMAS MANUTENÇÕES
-  // =======================================================
-
-  const ultimasManutencoes =
-    useMemo(() => {
-      return manutencoes.slice(0
+    return equipamentos
+      .filter(
+        (equip
