@@ -14,12 +14,15 @@ import {
   CircleOff,
 } from "lucide-react";
 
+import { supabase } from "@/lib/supabase";
+
 type Mecanico = {
-  id: string;
+  id: number;
   nome: string;
   especialidade: string;
   telefone: string;
   status: "Ativo" | "Inativo";
+  created_at?: string;
 };
 
 type FormMecanico = {
@@ -29,25 +32,6 @@ type FormMecanico = {
   status: "Ativo" | "Inativo";
 };
 
-const CHAVE_STORAGE = "mastermec_mecanicos";
-
-const mecanicosIniciais: Mecanico[] = [
-  {
-    id: "mecanico-joao-silva",
-    nome: "João Silva",
-    especialidade: "Mecânica Pesada",
-    telefone: "",
-    status: "Ativo",
-  },
-  {
-    id: "mecanico-carlos-souza",
-    nome: "Carlos Souza",
-    especialidade: "Elétrica / Eletrônica",
-    telefone: "",
-    status: "Ativo",
-  },
-];
-
 const formInicial: FormMecanico = {
   nome: "",
   especialidade: "",
@@ -56,94 +40,93 @@ const formInicial: FormMecanico = {
 };
 
 export default function MecanicosPage() {
-  const [mecanicos, setMecanicos] = useState<Mecanico[]>([]);
-  const [carregando, setCarregando] = useState(true);
+  const [mecanicos, setMecanicos] = useState<Mecanico[]>(
+    []
+  );
+
+  const [carregando, setCarregando] =
+    useState(true);
+
+  const [salvando, setSalvando] =
+    useState(false);
 
   const [mostrarCadastro, setMostrarCadastro] =
     useState(false);
 
   const [editandoId, setEditandoId] =
-    useState<string | null>(null);
+    useState<number | null>(null);
 
   const [form, setForm] =
     useState<FormMecanico>(formInicial);
 
   /*
-   * CARREGA OS MECÂNICOS SALVOS NO CELULAR/NAVEGADOR
-   */
+  =====================================================
+  CARREGAR MECÂNICOS DO SUPABASE
+  =====================================================
+  */
+
   useEffect(() => {
-    try {
-      const dadosSalvos =
-        localStorage.getItem(CHAVE_STORAGE);
+    carregarMecanicos();
+  }, []);
 
-      if (dadosSalvos) {
-        const lista = JSON.parse(
-          dadosSalvos
-        ) as Mecanico[];
+  async function carregarMecanicos() {
+    setCarregando(true);
 
-        if (Array.isArray(lista)) {
-          setMecanicos(lista);
-        } else {
-          setMecanicos(mecanicosIniciais);
-          localStorage.setItem(
-            CHAVE_STORAGE,
-            JSON.stringify(mecanicosIniciais)
-          );
-        }
-      } else {
-        /*
-         * Primeira utilização:
-         * cria os dois mecânicos iniciais.
-         */
-        setMecanicos(mecanicosIniciais);
+    const { data, error } = await supabase
+      .from("mecanicos")
+      .select(
+        `
+          id,
+          nome,
+          especialidade,
+          telefone,
+          status,
+          created_at
+        `
+      )
+      .order("id", {
+        ascending: true,
+      });
 
-        localStorage.setItem(
-          CHAVE_STORAGE,
-          JSON.stringify(mecanicosIniciais)
-        );
-      }
-    } catch (error) {
+    if (error) {
       console.error(
         "Erro ao carregar mecânicos:",
         error
       );
 
-      setMecanicos(mecanicosIniciais);
+      alert(
+        "Erro ao carregar os mecânicos:\n\n" +
+          error.message
+      );
+
+      setCarregando(false);
+      return;
     }
+
+    setMecanicos(
+      (data || []) as Mecanico[]
+    );
 
     setCarregando(false);
-  }, []);
+  }
 
   /*
-   * SALVA A LISTA COMPLETA NO NAVEGADOR
-   */
-  function salvarLista(
-    novaLista: Mecanico[]
-  ) {
-    try {
-      localStorage.setItem(
-        CHAVE_STORAGE,
-        JSON.stringify(novaLista)
-      );
-
-      setMecanicos(novaLista);
-    } catch (error) {
-      console.error(
-        "Erro ao salvar mecânicos:",
-        error
-      );
-
-      alert(
-        "Não foi possível salvar os mecânicos no navegador."
-      );
-    }
-  }
+  =====================================================
+  NOVO MECÂNICO
+  =====================================================
+  */
 
   function abrirNovoCadastro() {
     setEditandoId(null);
     setForm(formInicial);
     setMostrarCadastro(true);
   }
+
+  /*
+  =====================================================
+  EDITAR MECÂNICO
+  =====================================================
+  */
 
   function editarMecanico(
     mecanico: Mecanico
@@ -154,7 +137,8 @@ export default function MecanicosPage() {
       nome: mecanico.nome || "",
       especialidade:
         mecanico.especialidade || "",
-      telefone: mecanico.telefone || "",
+      telefone:
+        mecanico.telefone || "",
       status:
         mecanico.status || "Ativo",
     });
@@ -162,9 +146,17 @@ export default function MecanicosPage() {
     setMostrarCadastro(true);
   }
 
-  function salvarMecanico() {
+  /*
+  =====================================================
+  SALVAR MECÂNICO
+  =====================================================
+  */
+
+  async function salvarMecanico() {
     if (!form.nome.trim()) {
-      alert("Informe o nome do mecânico.");
+      alert(
+        "Informe o nome do mecânico."
+      );
       return;
     }
 
@@ -175,121 +167,197 @@ export default function MecanicosPage() {
       return;
     }
 
-    /*
-     * EDITAR MECÂNICO
-     */
-    if (editandoId !== null) {
-      const novaLista = mecanicos.map(
-        (mecanico) =>
-          mecanico.id === editandoId
-            ? {
-                ...mecanico,
-                nome: form.nome.trim(),
-                especialidade:
-                  form.especialidade.trim(),
-                telefone:
-                  form.telefone.trim(),
-                status: form.status,
-              }
-            : mecanico
-      );
+    setSalvando(true);
 
-      salvarLista(novaLista);
-
-      alert(
-        "Mecânico atualizado com sucesso."
-      );
-    } else {
+    try {
       /*
-       * NOVO MECÂNICO
-       */
-      const novoMecanico: Mecanico = {
-        id:
-          "mecanico-" +
-          Date.now().toString() +
-          "-" +
-          Math.random()
-            .toString(36)
-            .substring(2, 8),
+      =================================================
+      ATUALIZAÇÃO
+      =================================================
+      */
 
-        nome: form.nome.trim(),
+      if (editandoId !== null) {
+        const { error } = await supabase
+          .from("mecanicos")
+          .update({
+            nome: form.nome.trim(),
+            especialidade:
+              form.especialidade.trim(),
+            telefone:
+              form.telefone.trim(),
+            status: form.status,
+          })
+          .eq("id", editandoId);
 
-        especialidade:
-          form.especialidade.trim(),
+        if (error) {
+          console.error(
+            "Erro ao atualizar mecânico:",
+            error
+          );
 
-        telefone:
-          form.telefone.trim(),
+          alert(
+            "Erro ao atualizar mecânico:\n\n" +
+              error.message
+          );
 
-        status: form.status,
-      };
+          return;
+        }
 
-      const novaLista = [
-        ...mecanicos,
-        novoMecanico,
-      ];
+        alert(
+          "Mecânico atualizado com sucesso."
+        );
+      } else {
+        /*
+        ===============================================
+        NOVO CADASTRO
+        ===============================================
+        */
 
-      salvarLista(novaLista);
+        const { error } = await supabase
+          .from("mecanicos")
+          .insert({
+            nome: form.nome.trim(),
+            especialidade:
+              form.especialidade.trim(),
+            telefone:
+              form.telefone.trim(),
+            status: form.status,
+          });
 
-      alert(
-        "Mecânico cadastrado com sucesso."
-      );
+        if (error) {
+          console.error(
+            "Erro ao cadastrar mecânico:",
+            error
+          );
+
+          alert(
+            "Erro ao cadastrar mecânico:\n\n" +
+              error.message
+          );
+
+          return;
+        }
+
+        alert(
+          "Mecânico cadastrado com sucesso."
+        );
+      }
+
+      /*
+      ===============================================
+      LIMPA FORMULÁRIO
+      ===============================================
+      */
+
+      setForm(formInicial);
+      setEditandoId(null);
+      setMostrarCadastro(false);
+
+      /*
+      ===============================================
+      BUSCA NOVAMENTE NO SUPABASE
+      ===============================================
+      */
+
+      await carregarMecanicos();
+    } finally {
+      setSalvando(false);
     }
-
-    setForm(formInicial);
-    setEditandoId(null);
-    setMostrarCadastro(false);
   }
 
-  function excluirMecanico(
-    id: string
+  /*
+  =====================================================
+  ALTERAR STATUS
+  =====================================================
+  */
+
+  async function alternarStatus(
+    mecanico: Mecanico
   ) {
-    const mecanico = mecanicos.find(
-      (item) => item.id === id
-    );
+    const novoStatus =
+      mecanico.status === "Ativo"
+        ? "Inativo"
+        : "Ativo";
 
-    if (!mecanico) return;
+    const { error } = await supabase
+      .from("mecanicos")
+      .update({
+        status: novoStatus,
+      })
+      .eq("id", mecanico.id);
 
-    const confirmar = window.confirm(
-      `Deseja realmente excluir este mecânico?\n\n${mecanico.nome}`
-    );
+    if (error) {
+      console.error(error);
+
+      alert(
+        "Erro ao alterar o status:\n\n" +
+          error.message
+      );
+
+      return;
+    }
+
+    await carregarMecanicos();
+  }
+
+  /*
+  =====================================================
+  EXCLUIR
+  =====================================================
+  */
+
+  async function excluirMecanico(
+    mecanico: Mecanico
+  ) {
+    const confirmar =
+      window.confirm(
+        `Deseja realmente excluir este mecânico?\n\n${mecanico.nome}\n\nEsta operação não poderá ser desfeita.`
+      );
 
     if (!confirmar) return;
 
-    const novaLista = mecanicos.filter(
-      (item) => item.id !== id
-    );
+    const { error } = await supabase
+      .from("mecanicos")
+      .delete()
+      .eq("id", mecanico.id);
 
-    salvarLista(novaLista);
+    if (error) {
+      console.error(error);
+
+      alert(
+        "Erro ao excluir mecânico:\n\n" +
+          error.message
+      );
+
+      return;
+    }
+
+    await carregarMecanicos();
   }
 
-  function alternarStatus(
-    id: string
-  ) {
-    const novaLista = mecanicos.map(
+  /*
+  =====================================================
+  RESUMOS
+  =====================================================
+  */
+
+  const ativos =
+    mecanicos.filter(
       (mecanico) =>
-        mecanico.id === id
-          ? {
-              ...mecanico,
-              status:
-                mecanico.status === "Ativo"
-                  ? "Inativo"
-                  : "Ativo",
-            }
-          : mecanico
-    );
+        mecanico.status === "Ativo"
+    ).length;
 
-    salvarLista(novaLista);
-  }
+  const inativos =
+    mecanicos.filter(
+      (mecanico) =>
+        mecanico.status === "Inativo"
+    ).length;
 
-  const ativos = mecanicos.filter(
-    (mecanico) =>
-      mecanico.status === "Ativo"
-  ).length;
-
-  const inativos = mecanicos.filter(
-    (mecanico) =>
-      mecanico.status === "Inativo"
-  ).length;
+  /*
+  =====================================================
+  INTERFACE
+  =====================================================
+  */
 
   return (
     <main className="mastermec-app">
@@ -314,8 +382,8 @@ export default function MecanicosPage() {
                 color: "#666",
               }}
             >
-              Cadastro e controle da equipe
-              técnica
+              Cadastro e controle da
+              equipe técnica
             </p>
           </div>
 
@@ -336,20 +404,30 @@ export default function MecanicosPage() {
             <div
               style={{
                 ...iconeResumoStyle,
-                background: "#e8f1ff",
-                color: "#2563a8",
+                background:
+                  "#e8f1ff",
+                color:
+                  "#2563a8",
               }}
             >
-              <UserRound size={24} />
+              <UserRound
+                size={24}
+              />
             </div>
 
             <div>
-              <span style={resumoTituloStyle}>
+              <span
+                style={
+                  resumoTituloStyle
+                }
+              >
                 Total de mecânicos
               </span>
 
               <strong
-                style={resumoNumeroStyle}
+                style={
+                  resumoNumeroStyle
+                }
               >
                 {mecanicos.length}
               </strong>
@@ -360,20 +438,30 @@ export default function MecanicosPage() {
             <div
               style={{
                 ...iconeResumoStyle,
-                background: "#e4f7e9",
-                color: "#23844a",
+                background:
+                  "#e4f7e9",
+                color:
+                  "#23844a",
               }}
             >
-              <CheckCircle2 size={24} />
+              <CheckCircle2
+                size={24}
+              />
             </div>
 
             <div>
-              <span style={resumoTituloStyle}>
+              <span
+                style={
+                  resumoTituloStyle
+                }
+              >
                 Mecânicos ativos
               </span>
 
               <strong
-                style={resumoNumeroStyle}
+                style={
+                  resumoNumeroStyle
+                }
               >
                 {ativos}
               </strong>
@@ -384,20 +472,30 @@ export default function MecanicosPage() {
             <div
               style={{
                 ...iconeResumoStyle,
-                background: "#f8e6e6",
-                color: "#b53b3b",
+                background:
+                  "#f8e6e6",
+                color:
+                  "#b53b3b",
               }}
             >
-              <CircleOff size={24} />
+              <CircleOff
+                size={24}
+              />
             </div>
 
             <div>
-              <span style={resumoTituloStyle}>
+              <span
+                style={
+                  resumoTituloStyle
+                }
+              >
                 Inativos
               </span>
 
               <strong
-                style={resumoNumeroStyle}
+                style={
+                  resumoNumeroStyle
+                }
               >
                 {inativos}
               </strong>
@@ -409,22 +507,33 @@ export default function MecanicosPage() {
         {/* TABELA */}
 
         {carregando ? (
-          <div style={mensagemStyle}>
+          <div
+            style={
+              mensagemStyle
+            }
+          >
             Carregando mecânicos...
           </div>
         ) : mecanicos.length === 0 ? (
-          <div style={mensagemStyle}>
+          <div
+            style={
+              mensagemStyle
+            }
+          >
             <UserRound
               size={40}
               color="#aaa"
             />
 
             <p>
-              Nenhum mecânico cadastrado.
+              Nenhum mecânico
+              cadastrado.
             </p>
 
             <button
-              onClick={abrirNovoCadastro}
+              onClick={
+                abrirNovoCadastro
+              }
               style={botaoPreto}
             >
               <Plus size={18} />
@@ -432,31 +541,49 @@ export default function MecanicosPage() {
             </button>
           </div>
         ) : (
-          <div style={tabelaBoxStyle}>
-
-            <table style={tabelaStyle}>
-
+          <div
+            style={
+              tabelaBoxStyle
+            }
+          >
+            <table
+              style={
+                tabelaStyle
+              }
+            >
               <thead>
                 <tr
-                  style={cabecalhoTabelaStyle}
+                  style={
+                    cabecalhoTabelaStyle
+                  }
                 >
-                  <th style={thStyle}>
+                  <th
+                    style={thStyle}
+                  >
                     Mecânico
                   </th>
 
-                  <th style={thStyle}>
+                  <th
+                    style={thStyle}
+                  >
                     Especialidade
                   </th>
 
-                  <th style={thStyle}>
+                  <th
+                    style={thStyle}
+                  >
                     Telefone
                   </th>
 
-                  <th style={thStyle}>
+                  <th
+                    style={thStyle}
+                  >
                     Status
                   </th>
 
-                  <th style={thStyle}>
+                  <th
+                    style={thStyle}
+                  >
                     Ações
                   </th>
                 </tr>
@@ -466,18 +593,25 @@ export default function MecanicosPage() {
                 {mecanicos.map(
                   (mecanico) => (
                     <tr
-                      key={mecanico.id}
+                      key={
+                        mecanico.id
+                      }
                       style={{
                         borderTop:
                           "1px solid #eee",
                       }}
                     >
-
-                      <td style={tdStyle}>
+                      <td
+                        style={
+                          tdStyle
+                        }
+                      >
                         <div
                           style={{
-                            display: "flex",
-                            alignItems: "center",
+                            display:
+                              "flex",
+                            alignItems:
+                              "center",
                             gap: "10px",
                           }}
                         >
@@ -492,16 +626,24 @@ export default function MecanicosPage() {
                           </div>
 
                           <strong>
-                            {mecanico.nome}
+                            {
+                              mecanico.nome
+                            }
                           </strong>
                         </div>
                       </td>
 
-                      <td style={tdStyle}>
+                      <td
+                        style={
+                          tdStyle
+                        }
+                      >
                         <div
                           style={{
-                            display: "flex",
-                            alignItems: "center",
+                            display:
+                              "flex",
+                            alignItems:
+                              "center",
                             gap: "7px",
                           }}
                         >
@@ -516,11 +658,16 @@ export default function MecanicosPage() {
                         </div>
                       </td>
 
-                      <td style={tdStyle}>
+                      <td
+                        style={
+                          tdStyle
+                        }
+                      >
                         {mecanico.telefone ? (
                           <div
                             style={{
-                              display: "flex",
+                              display:
+                                "flex",
                               alignItems:
                                 "center",
                               gap: "7px",
@@ -540,31 +687,39 @@ export default function MecanicosPage() {
                         )}
                       </td>
 
-                      <td style={tdStyle}>
+                      <td
+                        style={
+                          tdStyle
+                        }
+                      >
                         <button
                           onClick={() =>
                             alternarStatus(
-                              mecanico.id
+                              mecanico
                             )
                           }
                           style={statusStyle(
                             mecanico.status
                           )}
-                          title="Clique para alterar o status"
                         >
-                          {mecanico.status}
+                          {
+                            mecanico.status
+                          }
                         </button>
                       </td>
 
-                      <td style={tdStyle}>
-
+                      <td
+                        style={
+                          tdStyle
+                        }
+                      >
                         <div
                           style={{
-                            display: "flex",
+                            display:
+                              "flex",
                             gap: "7px",
                           }}
                         >
-
                           <button
                             title="Editar mecânico"
                             onClick={() =>
@@ -585,7 +740,7 @@ export default function MecanicosPage() {
                             title="Excluir mecânico"
                             onClick={() =>
                               excluirMecanico(
-                                mecanico.id
+                                mecanico
                               )
                             }
                             style={{
@@ -600,30 +755,33 @@ export default function MecanicosPage() {
                               size={17}
                             />
                           </button>
-
                         </div>
-
                       </td>
-
                     </tr>
                   )
                 )}
               </tbody>
-
             </table>
-
           </div>
         )}
 
         {/* MODAL */}
 
         {mostrarCadastro && (
-          <div style={modalFundoStyle}>
-
-            <div style={modalStyle}>
-
+          <div
+            style={
+              modalFundoStyle
+            }
+          >
+            <div
+              style={
+                modalStyle
+              }
+            >
               <div
-                style={modalTopoStyle}
+                style={
+                  modalTopoStyle
+                }
               >
                 <div>
                   <h2
@@ -631,7 +789,8 @@ export default function MecanicosPage() {
                       margin: 0,
                     }}
                   >
-                    {editandoId
+                    {editandoId !==
+                    null
                       ? "Editar mecânico"
                       : "Novo mecânico"}
                   </h2>
@@ -640,13 +799,16 @@ export default function MecanicosPage() {
                     style={{
                       margin:
                         "5px 0 0",
-                      color: "#777",
+                      color:
+                        "#777",
                       fontSize:
                         "14px",
                     }}
                   >
-                    Preencha os dados
-                    da equipe técnica.
+                    Preencha os
+                    dados da
+                    equipe
+                    técnica.
                   </p>
                 </div>
 
@@ -655,25 +817,34 @@ export default function MecanicosPage() {
                     setMostrarCadastro(
                       false
                     );
-                    setEditandoId(null);
+                    setEditandoId(
+                      null
+                    );
                     setForm(
                       formInicial
                     );
                   }}
-                  style={fecharStyle}
+                  style={
+                    fecharStyle
+                  }
                 >
                   <X size={19} />
                 </button>
               </div>
 
               <div
-                style={formGridStyle}
+                style={
+                  formGridStyle
+                }
               >
-
                 <Campo
                   label="Nome completo"
-                  value={form.nome}
-                  onChange={(valor) =>
+                  value={
+                    form.nome
+                  }
+                  onChange={(
+                    valor
+                  ) =>
                     setForm({
                       ...form,
                       nome: valor,
@@ -686,7 +857,9 @@ export default function MecanicosPage() {
                   value={
                     form.especialidade
                   }
-                  onChange={(valor) =>
+                  onChange={(
+                    valor
+                  ) =>
                     setForm({
                       ...form,
                       especialidade:
@@ -700,7 +873,9 @@ export default function MecanicosPage() {
                   value={
                     form.telefone
                   }
-                  onChange={(valor) =>
+                  onChange={(
+                    valor
+                  ) =>
                     setForm({
                       ...form,
                       telefone:
@@ -711,7 +886,9 @@ export default function MecanicosPage() {
 
                 <div>
                   <label
-                    style={labelStyle}
+                    style={
+                      labelStyle
+                    }
                   >
                     Status
                   </label>
@@ -743,12 +920,14 @@ export default function MecanicosPage() {
                     </option>
                   </select>
                 </div>
-
               </div>
 
               <button
                 onClick={
                   salvarMecanico
+                }
+                disabled={
+                  salvando
                 }
                 style={{
                   ...botaoPreto,
@@ -757,27 +936,31 @@ export default function MecanicosPage() {
                     "center",
                   marginTop:
                     "25px",
+                  opacity:
+                    salvando
+                      ? 0.7
+                      : 1,
                 }}
               >
                 <Save size={19} />
 
-                {editandoId
+                {salvando
+                  ? "Salvando..."
+                  : editandoId !==
+                    null
                   ? "Salvar alterações"
                   : "Salvar mecânico"}
               </button>
-
             </div>
-
           </div>
         )}
-
       </div>
     </main>
   );
 }
 
 /* =====================================================
-   COMPONENTE CAMPO
+   CAMPO
 ===================================================== */
 
 function Campo({
@@ -794,7 +977,9 @@ function Campo({
   return (
     <div>
       <label
-        style={labelStyle}
+        style={
+          labelStyle
+        }
       >
         {label}
       </label>
@@ -806,7 +991,9 @@ function Campo({
             e.target.value
           )
         }
-        style={inputStyle}
+        style={
+          inputStyle
+        }
       />
     </div>
   );
@@ -831,22 +1018,28 @@ const topoStyle: React.CSSProperties =
     alignItems: "center",
     gap: "15px",
     flexWrap: "wrap",
-    marginBottom: "25px",
+    marginBottom:
+      "25px",
   };
 
 const botaoPreto: React.CSSProperties =
   {
     display: "flex",
-    alignItems: "center",
+    alignItems:
+      "center",
     justifyContent:
       "center",
     gap: "8px",
-    background: "#222",
+    background:
+      "#222",
     color: "#fff",
     border: "none",
-    padding: "12px 18px",
-    borderRadius: "8px",
-    cursor: "pointer",
+    padding:
+      "12px 18px",
+    borderRadius:
+      "8px",
+    cursor:
+      "pointer",
     fontWeight: 600,
   };
 
@@ -856,17 +1049,323 @@ const resumoGridStyle: React.CSSProperties =
     gridTemplateColumns:
       "repeat(auto-fit,minmax(220px,1fr))",
     gap: "15px",
-    marginBottom: "25px",
+    marginBottom:
+      "25px",
   };
 
 const resumoCardStyle: React.CSSProperties =
   {
-    background: "#fff",
-    borderRadius: "12px",
-    padding: "18px",
-    display: "flex",
-    alignItems: "center",
+    background:
+      "#fff",
+    borderRadius:
+      "12px",
+    padding:
+      "18px",
+    display:
+      "flex",
+    alignItems:
+      "center",
     gap: "15px",
-    border: "1px solid #eee",
+    border:
+      "1px solid #eee",
     boxShadow:
-      "0 2
+      "0 2px 10px rgba(0,0,0,.05)",
+  };
+
+const iconeResumoStyle: React.CSSProperties =
+  {
+    width: "50px",
+    height: "50px",
+    borderRadius:
+      "12px",
+    display:
+      "flex",
+    alignItems:
+      "center",
+    justifyContent:
+      "center",
+    flexShrink: 0,
+  };
+
+const resumoTituloStyle: React.CSSProperties =
+  {
+    display:
+      "block",
+    color:
+      "#777",
+    fontSize:
+      "13px",
+    marginBottom:
+      "3px",
+  };
+
+const resumoNumeroStyle: React.CSSProperties =
+  {
+    display:
+      "block",
+    fontSize:
+      "24px",
+    color:
+      "#172033",
+  };
+
+const mensagemStyle: React.CSSProperties =
+  {
+    background:
+      "#fff",
+    borderRadius:
+      "12px",
+    padding:
+      "50px 25px",
+    textAlign:
+      "center",
+    display:
+      "flex",
+    flexDirection:
+      "column",
+    alignItems:
+      "center",
+    gap:
+      "12px",
+  };
+
+const tabelaBoxStyle: React.CSSProperties =
+  {
+    background:
+      "#fff",
+    borderRadius:
+      "12px",
+    overflowX:
+      "auto",
+    boxShadow:
+      "0 2px 10px rgba(0,0,0,.06)",
+  };
+
+const tabelaStyle: React.CSSProperties =
+  {
+    width:
+      "100%",
+    borderCollapse:
+      "collapse",
+    minWidth:
+      "850px",
+  };
+
+const cabecalhoTabelaStyle: React.CSSProperties =
+  {
+    background:
+      "#f4f4f4",
+    textAlign:
+      "left",
+  };
+
+const thStyle: React.CSSProperties =
+  {
+    padding:
+      "14px",
+    whiteSpace:
+      "nowrap",
+    fontSize:
+      "13px",
+  };
+
+const tdStyle: React.CSSProperties =
+  {
+    padding:
+      "14px",
+    verticalAlign:
+      "middle",
+    fontSize:
+      "14px",
+  };
+
+const avatarStyle: React.CSSProperties =
+  {
+    width:
+      "36px",
+    height:
+      "36px",
+    borderRadius:
+      "50%",
+    background:
+      "#edf3ff",
+    color:
+      "#2864a6",
+    display:
+      "flex",
+    alignItems:
+      "center",
+    justifyContent:
+      "center",
+    flexShrink:
+      0,
+  };
+
+const acaoStyle: React.CSSProperties =
+  {
+    width:
+      "36px",
+    height:
+      "36px",
+    border:
+      "none",
+    borderRadius:
+      "7px",
+    background:
+      "#eee",
+    cursor:
+      "pointer",
+    display:
+      "flex",
+    alignItems:
+      "center",
+    justifyContent:
+      "center",
+  };
+
+const modalFundoStyle: React.CSSProperties =
+  {
+    position:
+      "fixed",
+    inset: 0,
+    background:
+      "rgba(0,0,0,.55)",
+    display:
+      "flex",
+    alignItems:
+      "center",
+    justifyContent:
+      "center",
+    padding:
+      "20px",
+    zIndex:
+      9999,
+  };
+
+const modalStyle: React.CSSProperties =
+  {
+    background:
+      "#fff",
+    borderRadius:
+      "12px",
+    padding:
+      "25px",
+    width:
+      "100%",
+    maxWidth:
+      "700px",
+    maxHeight:
+      "90vh",
+    overflowY:
+      "auto",
+  };
+
+const modalTopoStyle: React.CSSProperties =
+  {
+    display:
+      "flex",
+    justifyContent:
+      "space-between",
+    alignItems:
+      "center",
+    marginBottom:
+      "25px",
+    gap:
+      "15px",
+  };
+
+const fecharStyle: React.CSSProperties =
+  {
+    border:
+      "none",
+    background:
+      "#eee",
+    width:
+      "38px",
+    height:
+      "38px",
+    borderRadius:
+      "50%",
+    cursor:
+      "pointer",
+    display:
+      "flex",
+    alignItems:
+      "center",
+    justifyContent:
+      "center",
+    flexShrink:
+      0,
+  };
+
+const formGridStyle: React.CSSProperties =
+  {
+    display:
+      "grid",
+    gridTemplateColumns:
+      "repeat(auto-fit,minmax(220px,1fr))",
+    gap:
+      "15px",
+  };
+
+const labelStyle: React.CSSProperties =
+  {
+    display:
+      "block",
+    fontSize:
+      "13px",
+    fontWeight:
+      600,
+    color:
+      "#333",
+  };
+
+const inputStyle: React.CSSProperties =
+  {
+    width:
+      "100%",
+    marginTop:
+      "6px",
+    padding:
+      "11px",
+    border:
+      "1px solid #ccc",
+    borderRadius:
+      "7px",
+    outline:
+      "none",
+    fontSize:
+      "14px",
+    background:
+      "#fff",
+  };
+
+function statusStyle(
+  status: string
+): React.CSSProperties {
+  const ativo =
+    status === "Ativo";
+
+  return {
+    border:
+      "none",
+    padding:
+      "6px 11px",
+    borderRadius:
+      "20px",
+    background:
+      ativo
+        ? "#dff5e3"
+        : "#f5dada",
+    color:
+      ativo
+        ? "#20733d"
+        : "#a32e2e",
+    fontWeight:
+      600,
+    fontSize:
+      "12px",
+    cursor:
+      "pointer",
+  };
+}
