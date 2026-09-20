@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 
 interface Mecanico {
   id: number;
@@ -11,6 +10,25 @@ interface Mecanico {
   telefone: string;
   status: string;
 }
+
+const MECANICOS_STORAGE = "mastermec_mecanicos";
+
+const mecanicosIniciais: Mecanico[] = [
+  {
+    id: 1,
+    nome: "João Silva",
+    especialidade: "Hidráulica",
+    telefone: "(11) 99999-1111",
+    status: "Disponível",
+  },
+  {
+    id: 2,
+    nome: "Carlos Souza",
+    especialidade: "Motores Diesel",
+    telefone: "(11) 99999-2222",
+    status: "Em Serviço",
+  },
+];
 
 export default function Mecanicos() {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -22,69 +40,86 @@ export default function Mecanicos() {
   const [telefone, setTelefone] = useState("");
   const [status, setStatus] = useState("Disponível");
 
-  const [carregando, setCarregando] = useState(true);
-
   // =========================================================
-  // CARREGAR MECÂNICOS DO SUPABASE
+  // CARREGAR MECÂNICOS SALVOS
   // =========================================================
-  async function carregarMecanicos() {
-    setCarregando(true);
-
-    const { data, error } = await supabase
-      .from("mecanicos")
-      .select("*")
-      .order("id", { ascending: false });
-
-    if (error) {
-      console.error("Erro ao carregar mecânicos:", error);
-      alert("Erro ao carregar os mecânicos.");
-      setCarregando(false);
-      return;
-    }
-
-    setMecanicos(data || []);
-    setCarregando(false);
-  }
-
-  // Carrega automaticamente quando a página abre
   useEffect(() => {
-    carregarMecanicos();
+    try {
+      const dadosSalvos = localStorage.getItem(
+        MECANICOS_STORAGE
+      );
+
+      if (dadosSalvos) {
+        const mecanicosSalvos: Mecanico[] =
+          JSON.parse(dadosSalvos);
+
+        setMecanicos(mecanicosSalvos);
+      } else {
+        // Primeira utilização: cria os dois mecânicos padrão
+        localStorage.setItem(
+          MECANICOS_STORAGE,
+          JSON.stringify(mecanicosIniciais)
+        );
+
+        setMecanicos(mecanicosIniciais);
+      }
+    } catch (error) {
+      console.error(
+        "Erro ao carregar mecânicos:",
+        error
+      );
+
+      setMecanicos(mecanicosIniciais);
+    }
   }, []);
+
+  // =========================================================
+  // SALVAR LISTA NO NAVEGADOR
+  // =========================================================
+  function salvarMecanicos(lista: Mecanico[]) {
+    setMecanicos(lista);
+
+    try {
+      localStorage.setItem(
+        MECANICOS_STORAGE,
+        JSON.stringify(lista)
+      );
+    } catch (error) {
+      console.error(
+        "Erro ao salvar mecânicos:",
+        error
+      );
+    }
+  }
 
   // =========================================================
   // ADICIONAR MECÂNICO
   // =========================================================
-  async function adicionarMecanico() {
-    if (!nome.trim() || !especialidade.trim() || !telefone.trim()) {
+  function adicionarMecanico() {
+    if (
+      !nome.trim() ||
+      !especialidade.trim() ||
+      !telefone.trim()
+    ) {
       alert("Preencha todos os campos obrigatórios.");
       return;
     }
 
-    const novoMecanico = {
+    const novoMecanico: Mecanico = {
+      id: Date.now(),
       nome: nome.trim(),
       especialidade: especialidade.trim(),
       telefone: telefone.trim(),
       status,
     };
 
-    const { data, error } = await supabase
-      .from("mecanicos")
-      .insert([novoMecanico])
-      .select("*")
-      .single();
+    const novaLista = [
+      ...mecanicos,
+      novoMecanico,
+    ];
 
-    if (error) {
-      console.error("Erro ao salvar mecânico:", error);
-      alert("Erro ao salvar o mecânico.\n\n" + error.message);
-      return;
-    }
+    salvarMecanicos(novaLista);
 
-    // Adiciona imediatamente na tela
-    if (data) {
-      setMecanicos((listaAtual) => [data, ...listaAtual]);
-    }
-
-    // Limpa formulário
     setNome("");
     setEspecialidade("");
     setTelefone("");
@@ -96,7 +131,7 @@ export default function Mecanicos() {
   // =========================================================
   // EXCLUIR MECÂNICO
   // =========================================================
-  async function excluirMecanico(id: number) {
+  function excluirMecanico(id: number) {
     const confirmar = confirm(
       "Deseja realmente excluir este mecânico?"
     );
@@ -105,62 +140,31 @@ export default function Mecanicos() {
       return;
     }
 
-    const { error } = await supabase
-      .from("mecanicos")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      console.error("Erro ao excluir mecânico:", error);
-      alert("Erro ao excluir o mecânico.\n\n" + error.message);
-      return;
-    }
-
-    setMecanicos((listaAtual) =>
-      listaAtual.filter((mecanico) => mecanico.id !== id)
+    const novaLista = mecanicos.filter(
+      (mecanico) => mecanico.id !== id
     );
+
+    salvarMecanicos(novaLista);
   }
 
   // =========================================================
   // ALTERAR STATUS
   // =========================================================
-  async function alterarStatus(id: number) {
-    const mecanico = mecanicos.find(
-      (item) => item.id === id
-    );
-
-    if (!mecanico) {
-      return;
-    }
-
-    const novoStatus =
-      mecanico.status === "Disponível"
-        ? "Em Serviço"
-        : "Disponível";
-
-    const { error } = await supabase
-      .from("mecanicos")
-      .update({
-        status: novoStatus,
-      })
-      .eq("id", id);
-
-    if (error) {
-      console.error("Erro ao alterar status:", error);
-      alert("Erro ao alterar o status.\n\n" + error.message);
-      return;
-    }
-
-    setMecanicos((listaAtual) =>
-      listaAtual.map((item) =>
-        item.id === id
+  function alterarStatus(id: number) {
+    const novaLista = mecanicos.map(
+      (mecanico) =>
+        mecanico.id === id
           ? {
-              ...item,
-              status: novoStatus,
+              ...mecanico,
+              status:
+                mecanico.status === "Disponível"
+                  ? "Em Serviço"
+                  : "Disponível",
             }
-          : item
-      )
+          : mecanico
     );
+
+    salvarMecanicos(novaLista);
   }
 
   return (
@@ -180,7 +184,9 @@ export default function Mecanicos() {
           <button
             className="btn-novo"
             onClick={() =>
-              setMostrarFormulario(!mostrarFormulario)
+              setMostrarFormulario(
+                !mostrarFormulario
+              )
             }
           >
             + Novo Mecânico
@@ -198,7 +204,9 @@ export default function Mecanicos() {
                 type="text"
                 placeholder="Nome completo"
                 value={nome}
-                onChange={(e) => setNome(e.target.value)}
+                onChange={(e) =>
+                  setNome(e.target.value)
+                }
               />
 
               <input
@@ -206,7 +214,9 @@ export default function Mecanicos() {
                 placeholder="Especialidade"
                 value={especialidade}
                 onChange={(e) =>
-                  setEspecialidade(e.target.value)
+                  setEspecialidade(
+                    e.target.value
+                  )
                 }
               />
 
@@ -257,78 +267,82 @@ export default function Mecanicos() {
 
         <div className="cards-grid">
 
-          {carregando ? (
-            <p>Carregando mecânicos...</p>
-          ) : (
-            mecanicos.map((mecanico) => (
+          {mecanicos.map((mecanico) => (
 
-              <div
-                className="card-premium"
-                key={mecanico.id}
-              >
+            <div
+              className="card-premium"
+              key={mecanico.id}
+            >
 
-                <div className="mecanico-topo">
+              <div className="mecanico-topo">
 
-                  <div className="mecanico-avatar">
-                    👨‍🔧
-                  </div>
-
-                  <div>
-                    <h3>{mecanico.nome}</h3>
-                    <p>{mecanico.especialidade}</p>
-                  </div>
-
+                <div className="mecanico-avatar">
+                  👨‍🔧
                 </div>
 
-                <div className="mecanico-info">
-
+                <div>
+                  <h3>{mecanico.nome}</h3>
                   <p>
-                    📞 {mecanico.telefone}
+                    {mecanico.especialidade}
                   </p>
-
-                  <p>
-                    Status:
-                    <span
-                      className={
-                        mecanico.status === "Disponível"
-                          ? "status-operando"
-                          : mecanico.status === "Em Serviço"
-                          ? "status-manutencao"
-                          : "status-parada"
-                      }
-                    >
-                      {mecanico.status}
-                    </span>
-                  </p>
-
-                </div>
-
-                <div className="mecanico-acoes">
-
-                  <button
-                    className="btn-status"
-                    onClick={() =>
-                      alterarStatus(mecanico.id)
-                    }
-                  >
-                    🔄 Alterar Status
-                  </button>
-
-                  <button
-                    className="btn-excluir"
-                    onClick={() =>
-                      excluirMecanico(mecanico.id)
-                    }
-                  >
-                    🗑️
-                  </button>
-
                 </div>
 
               </div>
 
-            ))
-          )}
+              <div className="mecanico-info">
+
+                <p>
+                  📞 {mecanico.telefone}
+                </p>
+
+                <p>
+                  Status:
+                  <span
+                    className={
+                      mecanico.status ===
+                      "Disponível"
+                        ? "status-operando"
+                        : mecanico.status ===
+                          "Em Serviço"
+                        ? "status-manutencao"
+                        : "status-parada"
+                    }
+                  >
+                    {mecanico.status}
+                  </span>
+                </p>
+
+              </div>
+
+              <div className="mecanico-acoes">
+
+                <button
+                  className="btn-status"
+                  onClick={() =>
+                    alterarStatus(
+                      mecanico.id
+                    )
+                  }
+                >
+                  🔄 Alterar Status
+                </button>
+
+                <button
+                  className="btn-excluir"
+                  onClick={() =>
+                    excluirMecanico(
+                      mecanico.id
+                    )
+                  }
+                >
+                  🗑️
+                </button>
+
+              </div>
+
+            </div>
+
+          ))}
 
         </div>
 
