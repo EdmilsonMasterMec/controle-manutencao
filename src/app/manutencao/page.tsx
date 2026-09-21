@@ -1,6 +1,13 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import {
+  ChangeEvent,
+  FormEvent,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import {
   CalendarDays,
   CheckCircle2,
@@ -13,6 +20,7 @@ import {
   Plus,
   Save,
   Search,
+  Settings,
   Trash2,
   Wrench,
   X,
@@ -58,12 +66,6 @@ type Manutencao = {
   created_at?: string;
 };
 
-const statusEquipamento = [
-  "Operando",
-  "Em Manutenção",
-  "Parada",
-];
-
 const tiposManutencao = [
   "Preventiva",
   "Corretiva",
@@ -78,7 +80,9 @@ const prioridades = [
   "Urgente",
 ];
 
-function normalizarStatus(valor: string | null | undefined) {
+function normalizarStatus(
+  valor: string | null | undefined
+) {
   return String(valor || "")
     .trim()
     .toLowerCase()
@@ -87,7 +91,9 @@ function normalizarStatus(valor: string | null | undefined) {
     .replace(/\s+/g, " ");
 }
 
-function formatarData(valor: string | null | undefined) {
+function formatarData(
+  valor: string | null | undefined
+) {
   if (!valor) return "-";
 
   const data = new Date(valor);
@@ -99,10 +105,14 @@ function formatarData(valor: string | null | undefined) {
   return data.toLocaleDateString("pt-BR");
 }
 
-function nomeEquipamento(equipamento: Equipamento) {
+function nomeEquipamento(
+  equipamento: Equipamento
+) {
   return (
     equipamento.descricao_bem ||
-    `${equipamento.fabricante || ""} ${equipamento.modelo || ""}`.trim() ||
+    `${equipamento.fabricante || ""} ${
+      equipamento.modelo || ""
+    }`.trim() ||
     `Equipamento ${equipamento.id}`
   );
 }
@@ -122,22 +132,32 @@ async function comprimirImagem(
         let largura = imagem.width;
         let altura = imagem.height;
 
-        if (largura > maximo || altura > maximo) {
+        if (
+          largura > maximo ||
+          altura > maximo
+        ) {
           const proporcao = Math.min(
             maximo / largura,
             maximo / altura
           );
 
-          largura = Math.round(largura * proporcao);
-          altura = Math.round(altura * proporcao);
+          largura = Math.round(
+            largura * proporcao
+          );
+
+          altura = Math.round(
+            altura * proporcao
+          );
         }
 
-        const canvas = document.createElement("canvas");
+        const canvas =
+          document.createElement("canvas");
 
         canvas.width = largura;
         canvas.height = altura;
 
-        const contexto = canvas.getContext("2d");
+        const contexto =
+          canvas.getContext("2d");
 
         if (!contexto) {
           reject(
@@ -157,7 +177,10 @@ async function comprimirImagem(
         );
 
         resolve(
-          canvas.toDataURL("image/jpeg", 0.75)
+          canvas.toDataURL(
+            "image/jpeg",
+            0.75
+          )
         );
       };
 
@@ -169,7 +192,9 @@ async function comprimirImagem(
         );
       };
 
-      imagem.src = String(leitor.result);
+      imagem.src = String(
+        leitor.result
+      );
     };
 
     leitor.onerror = () => {
@@ -197,7 +222,8 @@ export default function ManutencaoPage() {
   const [salvando, setSalvando] =
     useState(false);
 
-  const [erro, setErro] = useState("");
+  const [erro, setErro] =
+    useState("");
 
   const [mensagem, setMensagem] =
     useState("");
@@ -205,17 +231,23 @@ export default function ManutencaoPage() {
   const [busca, setBusca] =
     useState("");
 
-  const [mostrarFormulario, setMostrarFormulario] =
-    useState(false);
+  const [
+    mostrarFormulario,
+    setMostrarFormulario,
+  ] = useState(false);
 
-  const [mostrarHistorico, setMostrarHistorico] =
-    useState(true);
+  const [
+    mostrarHistorico,
+    setMostrarHistorico,
+  ] = useState(true);
 
   const [editandoId, setEditandoId] =
     useState<number | null>(null);
 
-  const [equipamentoSelecionado, setEquipamentoSelecionado] =
-    useState("");
+  const [
+    equipamentoSelecionado,
+    setEquipamentoSelecionado,
+  ] = useState("");
 
   const [tipo, setTipo] =
     useState("Corretiva");
@@ -225,7 +257,9 @@ export default function ManutencaoPage() {
 
   const [data, setData] =
     useState(
-      new Date().toISOString().slice(0, 10)
+      new Date()
+        .toISOString()
+        .slice(0, 10)
     );
 
   const [horimetro, setHorimetro] =
@@ -311,13 +345,21 @@ export default function ManutencaoPage() {
 
   function limparFormulario() {
     setEquipamentoSelecionado("");
+
     setTipo("Corretiva");
+
     setMecanico("");
+
     setData(
-      new Date().toISOString().slice(0, 10)
+      new Date()
+        .toISOString()
+        .slice(0, 10)
     );
+
     setHorimetro("");
+
     setPrioridade("Média");
+
     setStatus("Em Andamento");
 
     setServicos([
@@ -328,18 +370,22 @@ export default function ManutencaoPage() {
     ]);
 
     setFotos([]);
+
     setEditandoId(null);
   }
 
   function abrirNovo() {
     limparFormulario();
+
     setErro("");
     setMensagem("");
+
     setMostrarFormulario(true);
   }
 
   function fecharFormulario() {
     limparFormulario();
+
     setMostrarFormulario(false);
   }
 
@@ -353,14 +399,17 @@ export default function ManutencaoPage() {
     ]);
   }
 
-  function removerServico(indice: number) {
+  function removerServico(
+    indice: number
+  ) {
     setServicos((atual) => {
       if (atual.length === 1) {
         return atual;
       }
 
       return atual.filter(
-        (_, index) => index !== indice
+        (_, index) =>
+          index !== indice
       );
     });
   }
@@ -371,13 +420,14 @@ export default function ManutencaoPage() {
     valor: string
   ) {
     setServicos((atual) =>
-      atual.map((servico, index) =>
-        index === indice
-          ? {
-              ...servico,
-              [campo]: valor,
-            }
-          : servico
+      atual.map(
+        (servico, index) =>
+          index === indice
+            ? {
+                ...servico,
+                [campo]: valor,
+              }
+            : servico
       )
     );
   }
@@ -385,26 +435,30 @@ export default function ManutencaoPage() {
   async function adicionarFotos(
     evento: ChangeEvent<HTMLInputElement>
   ) {
-    const arquivos =
-      Array.from(
-        evento.target.files || []
-      );
+    const arquivos = Array.from(
+      evento.target.files || []
+    );
 
     if (!arquivos.length) {
       return;
     }
 
     try {
-      const novasFotos: FotoServico[] = [];
+      const novasFotos: FotoServico[] =
+        [];
 
       for (const arquivo of arquivos) {
         const imagem =
-          await comprimirImagem(arquivo);
+          await comprimirImagem(
+            arquivo
+          );
 
         novasFotos.push({
           id:
             Date.now().toString() +
-            Math.random().toString(36).slice(2),
+            Math.random()
+              .toString(36)
+              .slice(2),
           nome: arquivo.name,
           imagem,
         });
@@ -430,7 +484,9 @@ export default function ManutencaoPage() {
 
   function removerFoto(id: string) {
     setFotos((atual) =>
-      atual.filter((foto) => foto.id !== id)
+      atual.filter(
+        (foto) => foto.id !== id
+      )
     );
   }
 
@@ -473,20 +529,28 @@ export default function ManutencaoPage() {
       const servicosValidos =
         servicos.filter(
           (servico) =>
-            servico.descricao.trim() !== ""
+            servico.descricao.trim() !==
+            ""
         );
 
       const dados = {
         equipamento_id:
           equipamento.id,
+
         maquina,
+
         tipo,
+
         mecanico:
           mecanico.trim(),
+
         data,
+
         horimetro:
           horimetro.trim(),
+
         prioridade,
+
         status,
       };
 
@@ -527,12 +591,6 @@ export default function ManutencaoPage() {
         );
       }
 
-      /*
-       * Os serviços e fotos ficam preparados no formulário
-       * para uso futuro em tabelas específicas.
-       * O registro principal é salvo na tabela manutencoes
-       * usando somente os campos existentes no cadastro principal.
-       */
       console.log(
         "Serviços registrados no formulário:",
         servicosValidos
@@ -546,6 +604,7 @@ export default function ManutencaoPage() {
       await carregarDados();
 
       limparFormulario();
+
       setMostrarFormulario(false);
     } catch (error) {
       console.error(
@@ -570,12 +629,15 @@ export default function ManutencaoPage() {
 
     setEquipamentoSelecionado(
       manutencao.equipamento_id
-        ? String(manutencao.equipamento_id)
+        ? String(
+            manutencao.equipamento_id
+          )
         : ""
     );
 
     setTipo(
-      manutencao.tipo || "Corretiva"
+      manutencao.tipo ||
+        "Corretiva"
     );
 
     setMecanico(
@@ -584,7 +646,10 @@ export default function ManutencaoPage() {
 
     setData(
       manutencao.data
-        ? manutencao.data.slice(0, 10)
+        ? manutencao.data.slice(
+            0,
+            10
+          )
         : new Date()
             .toISOString()
             .slice(0, 10)
@@ -595,15 +660,18 @@ export default function ManutencaoPage() {
     );
 
     setPrioridade(
-      manutencao.prioridade || "Média"
+      manutencao.prioridade ||
+        "Média"
     );
 
     setStatus(
-      manutencao.status || "Em Andamento"
+      manutencao.status ||
+        "Em Andamento"
     );
 
     setMensagem("");
     setErro("");
+
     setMostrarFormulario(true);
 
     window.scrollTo({
@@ -747,129 +815,157 @@ export default function ManutencaoPage() {
     ).length;
 
   return (
-    <main className="mastermec-app">
-      <div className="w-full p-4 md:p-6">
+    <main className="manutencao-page">
+      <div className="manutencao-container">
+
         {/* CABEÇALHO */}
 
-        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <Wrench size={30} />
+        <header className="manutencao-header">
+          <div className="manutencao-title">
 
-              <div>
-                <h1 className="text-2xl font-bold">
-                  Manutenção
-                </h1>
-
-                <p className="text-sm opacity-70">
-                  Controle de manutenções da frota
-                </p>
-              </div>
+            <div className="manutencao-title-icon">
+              <Wrench size={28} />
             </div>
+
+            <div>
+              <h1>Manutenção</h1>
+
+              <p>
+                Controle de manutenções da frota
+              </p>
+            </div>
+
           </div>
 
           <button
             type="button"
             onClick={abrirNovo}
-            className="flex items-center justify-center gap-2 rounded-xl border px-5 py-3 font-semibold shadow-sm"
+            className="btn-nova-manutencao"
           >
             <Plus size={20} />
-
             Nova Manutenção
           </button>
-        </div>
+        </header>
 
         {/* MENSAGENS */}
 
         {erro && (
-          <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-300 bg-red-50 p-4 text-red-700">
-            <XCircle
-              size={22}
-              className="mt-0.5 shrink-0"
-            />
+          <div className="manutencao-alert erro">
+
+            <XCircle size={22} />
 
             <div>
               <strong>
                 Não foi possível concluir a operação
               </strong>
 
-              <p className="mt-1 text-sm">
-                {erro}
-              </p>
+              <p>{erro}</p>
             </div>
+
           </div>
         )}
 
         {mensagem && (
-          <div className="mb-5 flex items-start gap-3 rounded-xl border border-green-300 bg-green-50 p-4 text-green-700">
-            <CheckCircle2
-              size={22}
-              className="mt-0.5 shrink-0"
-            />
+          <div className="manutencao-alert sucesso">
 
-            <p>{mensagem}</p>
+            <CheckCircle2 size={22} />
+
+            <div>
+              <strong>
+                Operação realizada
+              </strong>
+
+              <p>{mensagem}</p>
+            </div>
+
           </div>
         )}
 
         {/* CARDS */}
 
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border bg-white p-5 shadow-sm">
-            <p className="text-sm opacity-70">
-              Total
-            </p>
+        <section className="manutencao-stats">
 
-            <p className="mt-2 text-3xl font-bold">
-              {manutencoes.length}
-            </p>
+          <div className="manutencao-stat">
 
-            <p className="mt-1 text-xs opacity-60">
-              Manutenções registradas
-            </p>
+            <div className="stat-icon blue">
+              <Wrench size={23} />
+            </div>
+
+            <div>
+              <span>Total</span>
+
+              <strong>
+                {manutencoes.length}
+              </strong>
+
+              <small>
+                Manutenções registradas
+              </small>
+            </div>
+
           </div>
 
-          <div className="rounded-2xl border bg-white p-5 shadow-sm">
-            <p className="text-sm opacity-70">
-              Em andamento
-            </p>
+          <div className="manutencao-stat">
 
-            <p className="mt-2 text-3xl font-bold">
-              {emAndamento}
-            </p>
+            <div className="stat-icon orange">
+              <Clock3 size={23} />
+            </div>
 
-            <p className="mt-1 text-xs opacity-60">
-              Serviços ativos
-            </p>
+            <div>
+              <span>
+                Em andamento
+              </span>
+
+              <strong>
+                {emAndamento}
+              </strong>
+
+              <small>
+                Serviços ativos
+              </small>
+            </div>
+
           </div>
 
-          <div className="rounded-2xl border bg-white p-5 shadow-sm">
-            <p className="text-sm opacity-70">
-              Concluídas
-            </p>
+          <div className="manutencao-stat">
 
-            <p className="mt-2 text-3xl font-bold">
-              {concluidas}
-            </p>
+            <div className="stat-icon green">
+              <CheckCircle2 size={23} />
+            </div>
 
-            <p className="mt-1 text-xs opacity-60">
-              Serviços finalizados
-            </p>
+            <div>
+              <span>
+                Concluídas
+              </span>
+
+              <strong>
+                {concluidas}
+              </strong>
+
+              <small>
+                Serviços finalizados
+              </small>
+            </div>
+
           </div>
-        </div>
+
+        </section>
 
         {/* FORMULÁRIO */}
 
         {mostrarFormulario && (
-          <section className="mb-6 rounded-2xl border bg-white p-5 shadow-sm">
-            <div className="mb-5 flex items-center justify-between">
+          <section className="manutencao-form-card">
+
+            <div className="form-card-header">
+
               <div>
-                <h2 className="text-xl font-bold">
+                <h2>
                   {editandoId !== null
                     ? "Editar Manutenção"
                     : "Nova Manutenção"}
                 </h2>
 
-                <p className="text-sm opacity-60">
+                <p>
                   Informe os dados do serviço realizado.
                 </p>
               </div>
@@ -877,243 +973,310 @@ export default function ManutencaoPage() {
               <button
                 type="button"
                 onClick={fecharFormulario}
-                className="rounded-lg p-2"
+                className="icon-button"
               >
-                <X size={22} />
+                <X size={21} />
               </button>
+
             </div>
 
             <form
               onSubmit={salvarManutencao}
-              className="space-y-6"
+              className="manutencao-form"
             >
-              {/* DADOS PRINCIPAIS */}
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <div className="lg:col-span-2">
-                  <label className="mb-2 block text-sm font-semibold">
-                    Equipamento *
-                  </label>
+              {/* DADOS */}
 
-                  <select
-                    value={equipamentoSelecionado}
-                    onChange={(evento) => {
-                      setEquipamentoSelecionado(
-                        evento.target.value
-                      );
+              <div className="form-section">
 
-                      const equipamento =
-                        equipamentos.find(
-                          (item) =>
-                            String(item.id) ===
-                            evento.target.value
-                        );
+                <div className="form-section-title">
 
-                      if (
-                        equipamento?.horimetro &&
-                        !horimetro
-                      ) {
-                        setHorimetro(
-                          equipamento.horimetro
-                        );
+                  <Wrench size={19} />
+
+                  <div>
+                    <strong>
+                      Dados da manutenção
+                    </strong>
+
+                    <span>
+                      Informações principais do serviço
+                    </span>
+                  </div>
+
+                </div>
+
+                <div className="form-grid">
+
+                  <div className="form-field campo-equipamento">
+
+                    <label>
+                      Equipamento *
+                    </label>
+
+                    <select
+                      value={
+                        equipamentoSelecionado
                       }
-                    }}
-                    className="w-full rounded-xl border px-4 py-3"
-                    required
-                  >
-                    <option value="">
-                      Selecione o equipamento
-                    </option>
+                      onChange={(evento) => {
 
-                    {equipamentos.map(
-                      (equipamento) => (
-                        <option
-                          key={equipamento.id}
-                          value={equipamento.id}
-                        >
-                          {nomeEquipamento(
-                            equipamento
-                          )}
-                        </option>
-                      )
-                    )}
-                  </select>
-                </div>
+                        setEquipamentoSelecionado(
+                          evento.target.value
+                        );
 
-                <div>
-                  <label className="mb-2 block text-sm font-semibold">
-                    Tipo *
-                  </label>
+                        const equipamento =
+                          equipamentos.find(
+                            (item) =>
+                              String(
+                                item.id
+                              ) ===
+                              evento.target.value
+                          );
 
-                  <select
-                    value={tipo}
-                    onChange={(evento) =>
-                      setTipo(
-                        evento.target.value
-                      )
-                    }
-                    className="w-full rounded-xl border px-4 py-3"
-                    required
-                  >
-                    {tiposManutencao.map(
-                      (item) => (
-                        <option
-                          key={item}
-                          value={item}
-                        >
-                          {item}
-                        </option>
-                      )
-                    )}
-                  </select>
-                </div>
+                        if (
+                          equipamento?.horimetro &&
+                          !horimetro
+                        ) {
+                          setHorimetro(
+                            equipamento.horimetro
+                          );
+                        }
 
-                <div>
-                  <label className="mb-2 block text-sm font-semibold">
-                    Mecânico
-                  </label>
+                      }}
+                      required
+                    >
 
-                  <input
-                    value={mecanico}
-                    onChange={(evento) =>
-                      setMecanico(
-                        evento.target.value
-                      )
-                    }
-                    placeholder="Nome do mecânico"
-                    className="w-full rounded-xl border px-4 py-3"
-                  />
-                </div>
+                      <option value="">
+                        Selecione o equipamento
+                      </option>
 
-                <div>
-                  <label className="mb-2 block text-sm font-semibold">
-                    Data *
-                  </label>
+                      {equipamentos.map(
+                        (equipamento) => (
+                          <option
+                            key={
+                              equipamento.id
+                            }
+                            value={
+                              equipamento.id
+                            }
+                          >
+                            {nomeEquipamento(
+                              equipamento
+                            )}
+                          </option>
+                        )
+                      )}
 
-                  <input
-                    type="date"
-                    value={data}
-                    onChange={(evento) =>
-                      setData(
-                        evento.target.value
-                      )
-                    }
-                    className="w-full rounded-xl border px-4 py-3"
-                    required
-                  />
-                </div>
+                    </select>
 
-                <div>
-                  <label className="mb-2 block text-sm font-semibold">
-                    Horímetro
-                  </label>
+                  </div>
 
-                  <input
-                    value={horimetro}
-                    onChange={(evento) =>
-                      setHorimetro(
-                        evento.target.value
-                      )
-                    }
-                    placeholder="Ex.: 4.520 h"
-                    className="w-full rounded-xl border px-4 py-3"
-                  />
-                </div>
+                  <div className="form-field">
 
-                <div>
-                  <label className="mb-2 block text-sm font-semibold">
-                    Prioridade
-                  </label>
+                    <label>
+                      Tipo *
+                    </label>
 
-                  <select
-                    value={prioridade}
-                    onChange={(evento) =>
-                      setPrioridade(
-                        evento.target.value
-                      )
-                    }
-                    className="w-full rounded-xl border px-4 py-3"
-                  >
-                    {prioridades.map(
-                      (item) => (
-                        <option
-                          key={item}
-                          value={item}
-                        >
-                          {item}
-                        </option>
-                      )
-                    )}
-                  </select>
-                </div>
+                    <select
+                      value={tipo}
+                      onChange={(evento) =>
+                        setTipo(
+                          evento.target.value
+                        )
+                      }
+                      required
+                    >
 
-                <div>
-                  <label className="mb-2 block text-sm font-semibold">
-                    Status
-                  </label>
+                      {tiposManutencao.map(
+                        (item) => (
+                          <option
+                            key={item}
+                            value={item}
+                          >
+                            {item}
+                          </option>
+                        )
+                      )}
 
-                  <select
-                    value={status}
-                    onChange={(evento) =>
-                      setStatus(
-                        evento.target.value
-                      )
-                    }
-                    className="w-full rounded-xl border px-4 py-3"
-                  >
-                    <option value="Em Andamento">
-                      Em Andamento
-                    </option>
+                    </select>
 
-                    <option value="Concluída">
-                      Concluída
-                    </option>
+                  </div>
 
-                    <option value="Cancelada">
-                      Cancelada
-                    </option>
-                  </select>
+                  <div className="form-field">
+
+                    <label>
+                      Mecânico
+                    </label>
+
+                    <input
+                      value={mecanico}
+                      onChange={(evento) =>
+                        setMecanico(
+                          evento.target.value
+                        )
+                      }
+                      placeholder="Nome do mecânico"
+                    />
+
+                  </div>
+
+                  <div className="form-field">
+
+                    <label>
+                      Data *
+                    </label>
+
+                    <input
+                      type="date"
+                      value={data}
+                      onChange={(evento) =>
+                        setData(
+                          evento.target.value
+                        )
+                      }
+                      required
+                    />
+
+                  </div>
+
+                  <div className="form-field">
+
+                    <label>
+                      Horímetro
+                    </label>
+
+                    <input
+                      value={horimetro}
+                      onChange={(evento) =>
+                        setHorimetro(
+                          evento.target.value
+                        )
+                      }
+                      placeholder="Ex.: 4.520 h"
+                    />
+
+                  </div>
+
+                  <div className="form-field">
+
+                    <label>
+                      Prioridade
+                    </label>
+
+                    <select
+                      value={prioridade}
+                      onChange={(evento) =>
+                        setPrioridade(
+                          evento.target.value
+                        )
+                      }
+                    >
+
+                      {prioridades.map(
+                        (item) => (
+                          <option
+                            key={item}
+                            value={item}
+                          >
+                            {item}
+                          </option>
+                        )
+                      )}
+
+                    </select>
+
+                  </div>
+
+                  <div className="form-field">
+
+                    <label>
+                      Status
+                    </label>
+
+                    <select
+                      value={status}
+                      onChange={(evento) =>
+                        setStatus(
+                          evento.target.value
+                        )
+                      }
+                    >
+
+                      <option value="Em Andamento">
+                        Em Andamento
+                      </option>
+
+                      <option value="Concluída">
+                        Concluída
+                      </option>
+
+                      <option value="Cancelada">
+                        Cancelada
+                      </option>
+
+                    </select>
+
+                  </div>
+
                 </div>
               </div>
 
               {/* SERVIÇOS */}
 
-              <div className="rounded-2xl border p-4">
-                <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <h3 className="font-bold">
-                      Serviços Executados
-                    </h3>
+              <div className="form-section">
 
-                    <p className="text-sm opacity-60">
-                      Descreva os serviços realizados.
-                    </p>
+                <div className="section-header-mobile">
+
+                  <div className="form-section-title">
+
+                    <Settings size={19} />
+
+                    <div>
+                      <strong>
+                        Serviços Executados
+                      </strong>
+
+                      <span>
+                        Descreva os serviços realizados
+                      </span>
+                    </div>
+
                   </div>
 
                   <button
                     type="button"
-                    onClick={adicionarServico}
-                    className="flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold"
+                    onClick={
+                      adicionarServico
+                    }
+                    className="btn-secundario"
                   >
-                    <Plus size={18} />
-
-                    Adicionar serviço
+                    <Plus size={17} />
+                    Adicionar
                   </button>
+
                 </div>
 
-                <div className="space-y-4">
+                <div className="servicos-lista">
+
                   {servicos.map(
-                    (servico, indice) => (
+                    (
+                      servico,
+                      indice
+                    ) => (
+
                       <div
                         key={indice}
-                        className="rounded-xl border p-4"
+                        className="servico-card"
                       >
-                        <div className="mb-3 flex items-center justify-between">
+
+                        <div className="servico-header">
+
                           <strong>
-                            Serviço {indice + 1}
+                            Serviço{" "}
+                            {indice + 1}
                           </strong>
 
-                          {servicos.length > 1 && (
+                          {servicos.length >
+                            1 && (
                             <button
                               type="button"
                               onClick={() =>
@@ -1121,134 +1284,186 @@ export default function ManutencaoPage() {
                                   indice
                                 )
                               }
-                              className="rounded-lg p-2"
+                              className="btn-remover"
                             >
                               <Trash2
-                                size={18}
+                                size={17}
                               />
                             </button>
                           )}
+
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                          <input
-                            value={
-                              servico.descricao
-                            }
-                            onChange={(evento) =>
-                              alterarServico(
-                                indice,
-                                "descricao",
-                                evento.target.value
-                              )
-                            }
-                            placeholder="Descrição do serviço"
-                            className="w-full rounded-xl border px-4 py-3"
-                          />
+                        <div className="servico-grid">
 
-                          <input
-                            value={
-                              servico.observacao
-                            }
-                            onChange={(evento) =>
-                              alterarServico(
-                                indice,
-                                "observacao",
-                                evento.target.value
-                              )
-                            }
-                            placeholder="Observação"
-                            className="w-full rounded-xl border px-4 py-3"
-                          />
+                          <div className="form-field">
+
+                            <label>
+                              Descrição
+                            </label>
+
+                            <input
+                              value={
+                                servico.descricao
+                              }
+                              onChange={(
+                                evento
+                              ) =>
+                                alterarServico(
+                                  indice,
+                                  "descricao",
+                                  evento
+                                    .target
+                                    .value
+                                )
+                              }
+                              placeholder="Descrição do serviço"
+                            />
+
+                          </div>
+
+                          <div className="form-field">
+
+                            <label>
+                              Observação
+                            </label>
+
+                            <input
+                              value={
+                                servico.observacao
+                              }
+                              onChange={(
+                                evento
+                              ) =>
+                                alterarServico(
+                                  indice,
+                                  "observacao",
+                                  evento
+                                    .target
+                                    .value
+                                )
+                              }
+                              placeholder="Observação"
+                            />
+
+                          </div>
+
                         </div>
+
                       </div>
+
                     )
                   )}
+
                 </div>
+
               </div>
 
               {/* FOTOS */}
 
-              <div className="rounded-2xl border p-4">
-                <div className="mb-4">
-                  <h3 className="font-bold">
-                    Fotos do Serviço
-                  </h3>
+              <div className="form-section">
 
-                  <p className="text-sm opacity-60">
-                    Adicione fotos para registrar o serviço.
-                  </p>
+                <div className="form-section-title">
+
+                  <ImagePlus size={19} />
+
+                  <div>
+                    <strong>
+                      Fotos do Serviço
+                    </strong>
+
+                    <span>
+                      Adicione fotos para registrar o serviço
+                    </span>
+                  </div>
+
                 </div>
 
-                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed p-6">
-                  <ImagePlus size={24} />
+                <label className="upload-area">
 
-                  <span className="font-semibold">
+                  <ImagePlus size={30} />
+
+                  <strong>
                     Adicionar fotos
+                  </strong>
+
+                  <span>
+                    Toque aqui para selecionar imagens
                   </span>
 
                   <input
                     type="file"
                     accept="image/*"
                     multiple
-                    onChange={adicionarFotos}
-                    className="hidden"
+                    onChange={
+                      adicionarFotos
+                    }
                   />
+
                 </label>
 
                 {fotos.length > 0 && (
-                  <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-                    {fotos.map((foto) => (
-                      <div
-                        key={foto.id}
-                        className="relative overflow-hidden rounded-xl border"
-                      >
-                        <img
-                          src={foto.imagem}
-                          alt={foto.nome}
-                          className="h-32 w-full object-cover"
-                        />
+                  <div className="fotos-grid">
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            removerFoto(
-                              foto.id
-                            )
-                          }
-                          className="absolute right-2 top-2 rounded-full border bg-white p-1"
+                    {fotos.map(
+                      (foto) => (
+                        <div
+                          key={foto.id}
+                          className="foto-card"
                         >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    ))}
+
+                          <img
+                            src={foto.imagem}
+                            alt={foto.nome}
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              removerFoto(
+                                foto.id
+                              )
+                            }
+                            className="foto-remover"
+                          >
+                            <X size={16} />
+                          </button>
+
+                        </div>
+                      )
+                    )}
+
                   </div>
                 )}
+
               </div>
 
               {/* BOTÕES */}
 
-              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <div className="form-actions">
+
                 <button
                   type="button"
-                  onClick={fecharFormulario}
-                  className="flex items-center justify-center gap-2 rounded-xl border px-5 py-3 font-semibold"
+                  onClick={
+                    fecharFormulario
+                  }
+                  className="btn-cancelar"
                 >
                   <X size={18} />
-
                   Cancelar
                 </button>
 
                 <button
                   type="submit"
                   disabled={salvando}
-                  className="flex items-center justify-center gap-2 rounded-xl border px-5 py-3 font-semibold disabled:opacity-50"
+                  className="btn-salvar"
                 >
+
                   {salvando ? (
                     <>
                       <Loader2
                         size={18}
-                        className="animate-spin"
+                        className="spin"
                       />
 
                       Salvando...
@@ -1260,16 +1475,22 @@ export default function ManutencaoPage() {
                       Salvar Manutenção
                     </>
                   )}
+
                 </button>
+
               </div>
+
             </form>
+
           </section>
         )}
 
         {/* HISTÓRICO */}
 
-        <section className="rounded-2xl border bg-white p-5 shadow-sm">
-          <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <section className="historico-card">
+
+          <div className="historico-header">
+
             <button
               type="button"
               onClick={() =>
@@ -1277,375 +1498,1613 @@ export default function ManutencaoPage() {
                   (valor) => !valor
                 )
               }
-              className="flex items-center gap-2 text-left"
+              className="historico-titulo"
             >
+
+              <div className="historico-icon">
+                <CalendarDays size={21} />
+              </div>
+
+              <div>
+                <h2>
+                  Histórico de Manutenções
+                </h2>
+
+                <p>
+                  Consulte os serviços registrados.
+                </p>
+              </div>
+
               <ChevronDown
                 size={22}
                 className={
                   mostrarHistorico
-                    ? ""
-                    : "-rotate-90"
+                    ? "chevron-aberto"
+                    : "chevron-fechado"
                 }
               />
 
-              <div>
-                <h2 className="text-xl font-bold">
-                  Histórico de Manutenções
-                </h2>
-
-                <p className="text-sm opacity-60">
-                  Consulte os serviços registrados.
-                </p>
-              </div>
             </button>
 
-            <div className="relative w-full md:w-80">
-              <Search
-                size={19}
-                className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50"
-              />
+            {mostrarHistorico && (
+              <div className="busca-container">
 
-              <input
-                value={busca}
-                onChange={(evento) =>
-                  setBusca(
-                    evento.target.value
-                  )
-                }
-                placeholder="Buscar manutenção..."
-                className="w-full rounded-xl border py-3 pl-10 pr-4"
-              />
-            </div>
+                <Search size={18} />
+
+                <input
+                  value={busca}
+                  onChange={(evento) =>
+                    setBusca(
+                      evento.target.value
+                    )
+                  }
+                  placeholder="Buscar manutenção..."
+                />
+
+              </div>
+            )}
+
           </div>
 
           {mostrarHistorico && (
             <>
               {carregando ? (
-                <div className="flex items-center justify-center gap-3 p-10">
+                <div className="estado-vazio">
+
                   <Loader2
-                    size={24}
-                    className="animate-spin"
+                    size={28}
+                    className="spin"
                   />
 
-                  <span>
+                  <p>
                     Carregando manutenções...
-                  </span>
+                  </p>
+
                 </div>
               ) : manutencoesFiltradas.length ===
                 0 ? (
-                <div className="rounded-xl border border-dashed p-10 text-center">
-                  <Clock3
-                    size={32}
-                    className="mx-auto mb-3 opacity-50"
-                  />
+                <div className="estado-vazio">
 
-                  <p className="font-semibold">
+                  <Clock3 size={30} />
+
+                  <strong>
                     Nenhuma manutenção encontrada.
-                  </p>
+                  </strong>
 
-                  <p className="mt-1 text-sm opacity-60">
+                  <p>
                     Registre uma nova manutenção para
                     começar o histórico.
                   </p>
+
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[1000px] border-collapse">
-                    <thead>
-                      <tr className="border-b text-left text-sm">
-                        <th className="px-3 py-3">
-                          Máquina
-                        </th>
+                <>
+                  {/* CELULAR */}
 
-                        <th className="px-3 py-3">
-                          Tipo
-                        </th>
+                  <div className="historico-mobile">
 
-                        <th className="px-3 py-3">
-                          Mecânico
-                        </th>
+                    {manutencoesFiltradas.map(
+                      (manutencao) => {
 
-                        <th className="px-3 py-3">
-                          Data
-                        </th>
-
-                        <th className="px-3 py-3">
-                          Horímetro
-                        </th>
-
-                        <th className="px-3 py-3">
-                          Prioridade
-                        </th>
-
-                        <th className="px-3 py-3">
-                          Status
-                        </th>
-
-                        <th className="px-3 py-3 text-right">
-                          Ações
-                        </th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {manutencoesFiltradas.map(
-                        (manutencao) => {
-                          const statusNormalizado =
-                            normalizarStatus(
-                              manutencao.status
-                            );
-
-                          const ativa =
-                            statusNormalizado ===
-                              "em andamento" ||
-                            statusNormalizado ===
-                              "aberta" ||
-                            statusNormalizado ===
-                              "aberto" ||
-                            statusNormalizado ===
-                              "pendente";
-
-                          return (
-                            <tr
-                              key={manutencao.id}
-                              className="border-b text-sm"
-                            >
-                              <td className="px-3 py-4 font-semibold">
-                                {manutencao.maquina ||
-                                  "-"}
-                              </td>
-
-                              <td className="px-3 py-4">
-                                {manutencao.tipo ||
-                                  "-"}
-                              </td>
-
-                              <td className="px-3 py-4">
-                                {manutencao.mecanico ||
-                                  "-"}
-                              </td>
-
-                              <td className="px-3 py-4">
-                                {formatarData(
-                                  manutencao.data
-                                )}
-                              </td>
-
-                              <td className="px-3 py-4">
-                                {manutencao.horimetro ||
-                                  "-"}
-                              </td>
-
-                              <td className="px-3 py-4">
-                                {manutencao.prioridade ||
-                                  "-"}
-                              </td>
-
-                              <td className="px-3 py-4">
-                                <span className="inline-flex rounded-full border px-3 py-1 text-xs font-semibold">
-                                  {manutencao.status ||
-                                    "-"}
-                                </span>
-                              </td>
-
-                              <td className="px-3 py-4">
-                                <div className="flex justify-end gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setVisualizando(
-                                        manutencao
-                                      )
-                                    }
-                                    className="rounded-lg border p-2"
-                                    title="Visualizar"
-                                  >
-                                    <Eye
-                                      size={17}
-                                    />
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      editarManutencao(
-                                        manutencao
-                                      )
-                                    }
-                                    className="rounded-lg border p-2"
-                                    title="Editar"
-                                  >
-                                    <Pencil
-                                      size={17}
-                                    />
-                                  </button>
-
-                                  {ativa && (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        concluirManutencao(
-                                          manutencao.id
-                                        )
-                                      }
-                                      className="rounded-lg border p-2"
-                                      title="Concluir"
-                                    >
-                                      <CheckCircle2
-                                        size={17}
-                                      />
-                                    </button>
-                                  )}
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      excluirManutencao(
-                                        manutencao.id
-                                      )
-                                    }
-                                    className="rounded-lg border p-2"
-                                    title="Excluir"
-                                  >
-                                    <Trash2
-                                      size={17}
-                                    />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
+                        const statusNormalizado =
+                          normalizarStatus(
+                            manutencao.status
                           );
-                        }
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+
+                        const ativa =
+                          statusNormalizado ===
+                            "em andamento" ||
+                          statusNormalizado ===
+                            "aberta" ||
+                          statusNormalizado ===
+                            "aberto" ||
+                          statusNormalizado ===
+                            "pendente";
+
+                        return (
+                          <div
+                            key={
+                              manutencao.id
+                            }
+                            className="manutencao-mobile-card"
+                          >
+
+                            <div className="mobile-card-top">
+
+                              <div>
+
+                                <span className="mobile-label">
+                                  Máquina
+                                </span>
+
+                                <strong>
+                                  {manutencao.maquina ||
+                                    "-"}
+                                </strong>
+
+                              </div>
+
+                              <span className="status-pill">
+                                {manutencao.status ||
+                                  "-"}
+                              </span>
+
+                            </div>
+
+                            <div className="mobile-info-grid">
+
+                              <div>
+                                <span>
+                                  Tipo
+                                </span>
+
+                                <strong>
+                                  {manutencao.tipo ||
+                                    "-"}
+                                </strong>
+                              </div>
+
+                              <div>
+                                <span>
+                                  Mecânico
+                                </span>
+
+                                <strong>
+                                  {manutencao.mecanico ||
+                                    "-"}
+                                </strong>
+                              </div>
+
+                              <div>
+                                <span>
+                                  Data
+                                </span>
+
+                                <strong>
+                                  {formatarData(
+                                    manutencao.data
+                                  )}
+                                </strong>
+                              </div>
+
+                              <div>
+                                <span>
+                                  Horímetro
+                                </span>
+
+                                <strong>
+                                  {manutencao.horimetro ||
+                                    "-"}
+                                </strong>
+                              </div>
+
+                              <div>
+                                <span>
+                                  Prioridade
+                                </span>
+
+                                <strong>
+                                  {manutencao.prioridade ||
+                                    "-"}
+                                </strong>
+                              </div>
+
+                            </div>
+
+                            <div className="mobile-actions">
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setVisualizando(
+                                    manutencao
+                                  )
+                                }
+                              >
+                                <Eye size={17} />
+                                Ver
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  editarManutencao(
+                                    manutencao
+                                  )
+                                }
+                              >
+                                <Pencil size={17} />
+                                Editar
+                              </button>
+
+                              {ativa && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    concluirManutencao(
+                                      manutencao.id
+                                    )
+                                  }
+                                >
+                                  <CheckCircle2
+                                    size={17}
+                                  />
+                                  Concluir
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  excluirManutencao(
+                                    manutencao.id
+                                  )
+                                }
+                              >
+                                <Trash2 size={17} />
+                                Excluir
+                              </button>
+
+                            </div>
+
+                          </div>
+                        );
+                      }
+                    )}
+
+                  </div>
+
+                  {/* DESKTOP */}
+
+                  <div className="historico-desktop">
+
+                    <div className="table-scroll">
+
+                      <table>
+
+                        <thead>
+
+                          <tr>
+
+                            <th>
+                              Máquina
+                            </th>
+
+                            <th>
+                              Tipo
+                            </th>
+
+                            <th>
+                              Mecânico
+                            </th>
+
+                            <th>
+                              Data
+                            </th>
+
+                            <th>
+                              Horímetro
+                            </th>
+
+                            <th>
+                              Prioridade
+                            </th>
+
+                            <th>
+                              Status
+                            </th>
+
+                            <th>
+                              Ações
+                            </th>
+
+                          </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                          {manutencoesFiltradas.map(
+                            (manutencao) => {
+
+                              const statusNormalizado =
+                                normalizarStatus(
+                                  manutencao.status
+                                );
+
+                              const ativa =
+                                statusNormalizado ===
+                                  "em andamento" ||
+                                statusNormalizado ===
+                                  "aberta" ||
+                                statusNormalizado ===
+                                  "aberto" ||
+                                statusNormalizado ===
+                                  "pendente";
+
+                              return (
+                                <tr
+                                  key={
+                                    manutencao.id
+                                  }
+                                >
+
+                                  <td>
+                                    <strong>
+                                      {manutencao.maquina ||
+                                        "-"}
+                                    </strong>
+                                  </td>
+
+                                  <td>
+                                    {manutencao.tipo ||
+                                      "-"}
+                                  </td>
+
+                                  <td>
+                                    {manutencao.mecanico ||
+                                      "-"}
+                                  </td>
+
+                                  <td>
+                                    {formatarData(
+                                      manutencao.data
+                                    )}
+                                  </td>
+
+                                  <td>
+                                    {manutencao.horimetro ||
+                                      "-"}
+                                  </td>
+
+                                  <td>
+                                    {manutencao.prioridade ||
+                                      "-"}
+                                  </td>
+
+                                  <td>
+                                    <span className="status-pill">
+                                      {manutencao.status ||
+                                        "-"}
+                                    </span>
+                                  </td>
+
+                                  <td>
+
+                                    <div className="desktop-actions">
+
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setVisualizando(
+                                            manutencao
+                                          )
+                                        }
+                                        title="Visualizar"
+                                      >
+                                        <Eye size={16} />
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          editarManutencao(
+                                            manutencao
+                                          )
+                                        }
+                                        title="Editar"
+                                      >
+                                        <Pencil size={16} />
+                                      </button>
+
+                                      {ativa && (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            concluirManutencao(
+                                              manutencao.id
+                                            )
+                                          }
+                                          title="Concluir"
+                                        >
+                                          <CheckCircle2
+                                            size={16}
+                                          />
+                                        </button>
+                                      )}
+
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          excluirManutencao(
+                                            manutencao.id
+                                          )
+                                        }
+                                        title="Excluir"
+                                      >
+                                        <Trash2 size={16} />
+                                      </button>
+
+                                    </div>
+
+                                  </td>
+
+                                </tr>
+                              );
+                            }
+                          )}
+
+                        </tbody>
+
+                      </table>
+
+                    </div>
+
+                  </div>
+                </>
               )}
             </>
           )}
+
         </section>
 
-        {/* MODAL DE VISUALIZAÇÃO */}
-
-        {visualizando && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border bg-white p-6 shadow-xl">
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold">
-                    Detalhes da Manutenção
-                  </h2>
-
-                  <p className="text-sm opacity-60">
-                    Registro #{visualizando.id}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setVisualizando(null)
-                  }
-                  className="rounded-lg p-2"
-                >
-                  <X size={22} />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="rounded-xl border p-4">
-                  <p className="text-xs opacity-60">
-                    Máquina
-                  </p>
-
-                  <p className="mt-1 font-semibold">
-                    {visualizando.maquina ||
-                      "-"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border p-4">
-                  <p className="text-xs opacity-60">
-                    Tipo
-                  </p>
-
-                  <p className="mt-1 font-semibold">
-                    {visualizando.tipo || "-"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border p-4">
-                  <p className="text-xs opacity-60">
-                    Mecânico
-                  </p>
-
-                  <p className="mt-1 font-semibold">
-                    {visualizando.mecanico ||
-                      "-"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border p-4">
-                  <p className="text-xs opacity-60">
-                    Data
-                  </p>
-
-                  <p className="mt-1 font-semibold">
-                    {formatarData(
-                      visualizando.data
-                    )}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border p-4">
-                  <p className="text-xs opacity-60">
-                    Horímetro
-                  </p>
-
-                  <p className="mt-1 font-semibold">
-                    {visualizando.horimetro ||
-                      "-"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border p-4">
-                  <p className="text-xs opacity-60">
-                    Prioridade
-                  </p>
-
-                  <p className="mt-1 font-semibold">
-                    {visualizando.prioridade ||
-                      "-"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border p-4 sm:col-span-2">
-                  <p className="text-xs opacity-60">
-                    Status
-                  </p>
-
-                  <p className="mt-1 font-semibold">
-                    {visualizando.status ||
-                      "-"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setVisualizando(null)
-                  }
-                  className="rounded-xl border px-5 py-3 font-semibold"
-                >
-                  Fechar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* MODAL */}
+
+      {visualizando && (
+        <div className="modal-overlay">
+
+          <div className="modal-card">
+
+            <div className="modal-header">
+
+              <div>
+
+                <h2>
+                  Detalhes da Manutenção
+                </h2>
+
+                <p>
+                  Registro #{visualizando.id}
+                </p>
+
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setVisualizando(null)
+                }
+              >
+                <X size={21} />
+              </button>
+
+            </div>
+
+            <div className="modal-grid">
+
+              <div>
+                <span>
+                  Máquina
+                </span>
+
+                <strong>
+                  {visualizando.maquina ||
+                    "-"}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Tipo
+                </span>
+
+                <strong>
+                  {visualizando.tipo ||
+                    "-"}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Mecânico
+                </span>
+
+                <strong>
+                  {visualizando.mecanico ||
+                    "-"}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Data
+                </span>
+
+                <strong>
+                  {formatarData(
+                    visualizando.data
+                  )}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Horímetro
+                </span>
+
+                <strong>
+                  {visualizando.horimetro ||
+                    "-"}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Prioridade
+                </span>
+
+                <strong>
+                  {visualizando.prioridade ||
+                    "-"}
+                </strong>
+              </div>
+
+              <div className="modal-full">
+
+                <span>
+                  Status
+                </span>
+
+                <strong>
+                  {visualizando.status ||
+                    "-"}
+                </strong>
+
+              </div>
+
+            </div>
+
+            <div className="modal-footer">
+
+              <button
+                type="button"
+                onClick={() =>
+                  setVisualizando(null)
+                }
+              >
+                Fechar
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+      )}
+
+      {/* ESTILO EXCLUSIVO DA PÁGINA */}
+
+      <style jsx>{`
+
+        .manutencao-page {
+          width: 100%;
+          min-height: 100vh;
+          padding: 24px;
+          color: #172033;
+        }
+
+        .manutencao-container {
+          width: 100%;
+          max-width: 1500px;
+          margin: 0 auto;
+        }
+
+        .manutencao-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 20px;
+          margin-bottom: 20px;
+          padding: 20px 22px;
+          background: rgba(255,255,255,.95);
+          border: 1px solid rgba(30,41,59,.08);
+          border-radius: 20px;
+          box-shadow: 0 8px 25px rgba(15,23,42,.07);
+        }
+
+        .manutencao-title {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+
+        .manutencao-title-icon {
+          width: 52px;
+          height: 52px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 15px;
+          background: #fff7ed;
+          color: #ea580c;
+        }
+
+        .manutencao-title h1 {
+          margin: 0;
+          font-size: 30px;
+          font-weight: 800;
+          line-height: 1.1;
+        }
+
+        .manutencao-title p {
+          margin: 5px 0 0;
+          color: #64748b;
+          font-size: 14px;
+        }
+
+        .btn-nova-manutencao {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 12px 18px;
+          border: none;
+          border-radius: 12px;
+          background: #172033;
+          color: white;
+          font-weight: 700;
+          cursor: pointer;
+          box-shadow: 0 5px 15px rgba(15,23,42,.15);
+        }
+
+        .manutencao-alert {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 16px;
+          padding: 14px 16px;
+          border-radius: 14px;
+        }
+
+        .manutencao-alert p {
+          margin: 3px 0 0;
+          font-size: 13px;
+        }
+
+        .manutencao-alert.erro {
+          color: #b91c1c;
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+        }
+
+        .manutencao-alert.sucesso {
+          color: #047857;
+          background: #ecfdf5;
+          border: 1px solid #a7f3d0;
+        }
+
+        .manutencao-stats {
+          display: grid;
+          grid-template-columns: repeat(3,minmax(0,1fr));
+          gap: 15px;
+          margin-bottom: 20px;
+        }
+
+        .manutencao-stat {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          padding: 18px;
+          background: rgba(255,255,255,.96);
+          border: 1px solid rgba(30,41,59,.08);
+          border-radius: 18px;
+          box-shadow: 0 7px 22px rgba(15,23,42,.06);
+        }
+
+        .stat-icon {
+          width: 46px;
+          height: 46px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          border-radius: 13px;
+        }
+
+        .stat-icon.blue {
+          background: #eff6ff;
+          color: #2563eb;
+        }
+
+        .stat-icon.orange {
+          background: #fff7ed;
+          color: #ea580c;
+        }
+
+        .stat-icon.green {
+          background: #ecfdf5;
+          color: #059669;
+        }
+
+        .manutencao-stat span {
+          display: block;
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .manutencao-stat strong {
+          display: block;
+          margin-top: 3px;
+          font-size: 28px;
+          line-height: 1;
+          font-weight: 800;
+        }
+
+        .manutencao-stat small {
+          display: block;
+          margin-top: 5px;
+          color: #94a3b8;
+          font-size: 10px;
+        }
+
+        .manutencao-form-card,
+        .historico-card {
+          margin-bottom: 20px;
+          padding: 20px;
+          background: rgba(255,255,255,.96);
+          border: 1px solid rgba(30,41,59,.08);
+          border-radius: 20px;
+          box-shadow: 0 8px 25px rgba(15,23,42,.07);
+        }
+
+        .form-card-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 15px;
+          margin-bottom: 22px;
+        }
+
+        .form-card-header h2,
+        .historico-header h2 {
+          margin: 0;
+          font-size: 19px;
+          font-weight: 800;
+        }
+
+        .form-card-header p,
+        .historico-header p {
+          margin: 4px 0 0;
+          color: #64748b;
+          font-size: 12px;
+        }
+
+        .icon-button {
+          width: 38px;
+          height: 38px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          background: white;
+          cursor: pointer;
+        }
+
+        .manutencao-form {
+          display: flex;
+          flex-direction: column;
+          gap: 18px;
+        }
+
+        .form-section {
+          padding: 17px;
+          border: 1px solid #e2e8f0;
+          border-radius: 16px;
+          background: #fbfdff;
+        }
+
+        .form-section-title {
+          display: flex;
+          align-items: flex-start;
+          gap: 9px;
+          margin-bottom: 15px;
+        }
+
+        .form-section-title svg {
+          margin-top: 2px;
+          color: #2563eb;
+          flex-shrink: 0;
+        }
+
+        .form-section-title strong {
+          display: block;
+          font-size: 14px;
+        }
+
+        .form-section-title span {
+          display: block;
+          margin-top: 3px;
+          color: #64748b;
+          font-size: 11px;
+        }
+
+        .form-grid {
+          display: grid;
+          grid-template-columns: repeat(3,minmax(0,1fr));
+          gap: 14px;
+        }
+
+        .campo-equipamento {
+          grid-column: span 2;
+        }
+
+        .form-field label {
+          display: block;
+          margin-bottom: 6px;
+          color: #334155;
+          font-size: 11px;
+          font-weight: 700;
+        }
+
+        .form-field input,
+        .form-field select {
+          width: 100%;
+          min-height: 44px;
+          padding: 10px 12px;
+          border: 1px solid #cbd5e1;
+          border-radius: 10px;
+          background: white;
+          color: #172033;
+          outline: none;
+          font-size: 13px;
+        }
+
+        .form-field input:focus,
+        .form-field select:focus {
+          border-color: #2563eb;
+          box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+        }
+
+        .section-header-mobile {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 15px;
+          margin-bottom: 15px;
+        }
+
+        .section-header-mobile .form-section-title {
+          margin-bottom: 0;
+        }
+
+        .btn-secundario {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 9px 13px;
+          border: 1px solid #cbd5e1;
+          border-radius: 10px;
+          background: white;
+          font-size: 11px;
+          font-weight: 700;
+          white-space: nowrap;
+          cursor: pointer;
+        }
+
+        .servicos-lista {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .servico-card {
+          padding: 14px;
+          border: 1px solid #e2e8f0;
+          border-radius: 13px;
+          background: white;
+        }
+
+        .servico-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 12px;
+        }
+
+        .servico-header strong {
+          font-size: 12px;
+        }
+
+        .btn-remover {
+          width: 34px;
+          height: 34px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid #fecaca;
+          border-radius: 9px;
+          background: #fef2f2;
+          color: #dc2626;
+          cursor: pointer;
+        }
+
+        .servico-grid {
+          display: grid;
+          grid-template-columns: repeat(2,minmax(0,1fr));
+          gap: 12px;
+        }
+
+        .upload-area {
+          min-height: 120px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 5px;
+          border: 2px dashed #cbd5e1;
+          border-radius: 14px;
+          color: #64748b;
+          cursor: pointer;
+          text-align: center;
+        }
+
+        .upload-area strong {
+          color: #334155;
+          font-size: 13px;
+        }
+
+        .upload-area span {
+          font-size: 10px;
+        }
+
+        .upload-area input {
+          display: none;
+        }
+
+        .fotos-grid {
+          display: grid;
+          grid-template-columns: repeat(5,minmax(0,1fr));
+          gap: 10px;
+          margin-top: 12px;
+        }
+
+        .foto-card {
+          position: relative;
+          overflow: hidden;
+          border-radius: 11px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .foto-card img {
+          display: block;
+          width: 100%;
+          height: 120px;
+          object-fit: cover;
+        }
+
+        .foto-remover {
+          position: absolute;
+          top: 6px;
+          right: 6px;
+          width: 28px;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: none;
+          border-radius: 50%;
+          background: white;
+          cursor: pointer;
+        }
+
+        .form-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+        }
+
+        .btn-cancelar,
+        .btn-salvar {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          padding: 11px 18px;
+          border-radius: 11px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        .btn-cancelar {
+          border: 1px solid #cbd5e1;
+          background: white;
+        }
+
+        .btn-salvar {
+          border: none;
+          background: #172033;
+          color: white;
+        }
+
+        .btn-salvar:disabled {
+          opacity: .5;
+          cursor: not-allowed;
+        }
+
+        .historico-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 15px;
+          margin-bottom: 18px;
+        }
+
+        .historico-titulo {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          border: none;
+          background: transparent;
+          text-align: left;
+          cursor: pointer;
+        }
+
+        .historico-icon {
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          border-radius: 11px;
+          background: #eff6ff;
+          color: #2563eb;
+        }
+
+        .chevron-aberto {
+          transform: rotate(0deg);
+        }
+
+        .chevron-fechado {
+          transform: rotate(-90deg);
+        }
+
+        .busca-container {
+          width: 300px;
+          position: relative;
+        }
+
+        .busca-container svg {
+          position: absolute;
+          left: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #64748b;
+        }
+
+        .busca-container input {
+          width: 100%;
+          height: 42px;
+          padding: 8px 12px 8px 38px;
+          border: 1px solid #cbd5e1;
+          border-radius: 10px;
+          outline: none;
+        }
+
+        .table-scroll {
+          width: 100%;
+          overflow-x: auto;
+          border: 1px solid #e2e8f0;
+          border-radius: 13px;
+        }
+
+        .table-scroll table {
+          width: 100%;
+          min-width: 950px;
+          border-collapse: collapse;
+        }
+
+        .table-scroll th {
+          padding: 12px;
+          background: #f8fafc;
+          border-bottom: 1px solid #e2e8f0;
+          color: #475569;
+          font-size: 10px;
+          font-weight: 800;
+          text-align: left;
+          white-space: nowrap;
+        }
+
+        .table-scroll td {
+          padding: 13px 12px;
+          border-bottom: 1px solid #edf2f7;
+          color: #334155;
+          font-size: 11px;
+          white-space: nowrap;
+        }
+
+        .table-scroll tbody tr:last-child td {
+          border-bottom: none;
+        }
+
+        .status-pill {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 5px 9px;
+          border-radius: 999px;
+          background: #fff7ed;
+          color: #c2410c;
+          font-size: 9px;
+          font-weight: 800;
+          white-space: nowrap;
+        }
+
+        .desktop-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 5px;
+        }
+
+        .desktop-actions button {
+          width: 31px;
+          height: 31px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          background: white;
+          cursor: pointer;
+        }
+
+        .historico-mobile {
+          display: none;
+        }
+
+        .estado-vazio {
+          min-height: 160px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          color: #64748b;
+          text-align: center;
+          border: 1px dashed #cbd5e1;
+          border-radius: 14px;
+          padding: 20px;
+        }
+
+        .estado-vazio p {
+          margin: 0;
+          font-size: 12px;
+        }
+
+        .modal-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 100;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+          background: rgba(15,23,42,.55);
+        }
+
+        .modal-card {
+          width: 100%;
+          max-width: 650px;
+          max-height: 90vh;
+          overflow-y: auto;
+          padding: 22px;
+          border-radius: 20px;
+          background: white;
+          box-shadow: 0 25px 70px rgba(0,0,0,.25);
+        }
+
+        .modal-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 15px;
+          margin-bottom: 18px;
+        }
+
+        .modal-header h2 {
+          margin: 0;
+          font-size: 20px;
+          font-weight: 800;
+        }
+
+        .modal-header p {
+          margin: 4px 0 0;
+          color: #64748b;
+          font-size: 11px;
+        }
+
+        .modal-header button {
+          width: 38px;
+          height: 38px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid #e2e8f0;
+          border-radius: 9px;
+          background: white;
+          cursor: pointer;
+        }
+
+        .modal-grid {
+          display: grid;
+          grid-template-columns: repeat(2,minmax(0,1fr));
+          gap: 10px;
+        }
+
+        .modal-grid > div {
+          padding: 13px;
+          border: 1px solid #e2e8f0;
+          border-radius: 11px;
+          background: #f8fafc;
+        }
+
+        .modal-grid span {
+          display: block;
+          color: #64748b;
+          font-size: 10px;
+        }
+
+        .modal-grid strong {
+          display: block;
+          margin-top: 4px;
+          font-size: 13px;
+        }
+
+        .modal-full {
+          grid-column: span 2;
+        }
+
+        .modal-footer {
+          display: flex;
+          justify-content: flex-end;
+          margin-top: 18px;
+        }
+
+        .modal-footer button {
+          padding: 10px 18px;
+          border: 1px solid #cbd5e1;
+          border-radius: 10px;
+          background: white;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        .spin {
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        @media (max-width: 1000px) {
+
+          .form-grid {
+            grid-template-columns:
+              repeat(2,minmax(0,1fr));
+          }
+
+          .campo-equipamento {
+            grid-column: span 2;
+          }
+
+          .fotos-grid {
+            grid-template-columns:
+              repeat(4,minmax(0,1fr));
+          }
+        }
+
+        @media (max-width: 700px) {
+
+          .manutencao-page {
+            padding: 10px;
+          }
+
+          .manutencao-header {
+            padding: 14px;
+            border-radius: 16px;
+            align-items: stretch;
+            flex-direction: column;
+            gap: 12px;
+          }
+
+          .manutencao-title {
+            gap: 10px;
+          }
+
+          .manutencao-title-icon {
+            width: 43px;
+            height: 43px;
+            border-radius: 12px;
+          }
+
+          .manutencao-title h1 {
+            font-size: 24px;
+          }
+
+          .manutencao-title p {
+            font-size: 11px;
+          }
+
+          .btn-nova-manutencao {
+            width: 100%;
+            min-height: 45px;
+          }
+
+          .manutencao-stats {
+            grid-template-columns:
+              repeat(3,minmax(0,1fr));
+            gap: 7px;
+            margin-bottom: 12px;
+          }
+
+          .manutencao-stat {
+            display: block;
+            padding: 11px 8px;
+            border-radius: 14px;
+            text-align: center;
+          }
+
+          .stat-icon {
+            width: 34px;
+            height: 34px;
+            margin: 0 auto 7px;
+            border-radius: 9px;
+          }
+
+          .manutencao-stat span {
+            font-size: 9px;
+          }
+
+          .manutencao-stat strong {
+            margin-top: 4px;
+            font-size: 22px;
+          }
+
+          .manutencao-stat small {
+            display: none;
+          }
+
+          .manutencao-form-card,
+          .historico-card {
+            padding: 13px;
+            margin-bottom: 12px;
+            border-radius: 16px;
+          }
+
+          .form-card-header {
+            margin-bottom: 15px;
+          }
+
+          .form-card-header h2,
+          .historico-header h2 {
+            font-size: 16px;
+          }
+
+          .form-card-header p,
+          .historico-header p {
+            font-size: 10px;
+          }
+
+          .form-grid {
+            grid-template-columns: 1fr;
+            gap: 11px;
+          }
+
+          .campo-equipamento {
+            grid-column: span 1;
+          }
+
+          .form-section {
+            padding: 12px;
+          }
+
+          .section-header-mobile {
+            align-items: flex-start;
+            flex-direction: column;
+          }
+
+          .btn-secundario {
+            width: 100%;
+            justify-content: center;
+          }
+
+          .servico-grid {
+            grid-template-columns: 1fr;
+            gap: 10px;
+          }
+
+          .fotos-grid {
+            grid-template-columns:
+              repeat(2,minmax(0,1fr));
+          }
+
+          .foto-card img {
+            height: 110px;
+          }
+
+          .form-actions {
+            flex-direction: column-reverse;
+          }
+
+          .btn-cancelar,
+          .btn-salvar {
+            width: 100%;
+            min-height: 45px;
+          }
+
+          .historico-header {
+            align-items: stretch;
+            flex-direction: column;
+            gap: 12px;
+          }
+
+          .historico-titulo {
+            width: 100%;
+          }
+
+          .busca-container {
+            width: 100%;
+          }
+
+          .historico-desktop {
+            display: none;
+          }
+
+          .historico-mobile {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+          }
+
+          .manutencao-mobile-card {
+            padding: 13px;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            background: #fbfdff;
+          }
+
+          .mobile-card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            padding-bottom: 11px;
+            border-bottom: 1px solid #e2e8f0;
+          }
+
+          .mobile-label {
+            display: block;
+            margin-bottom: 3px;
+            color: #94a3b8;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+          }
+
+          .mobile-card-top strong {
+            display: block;
+            font-size: 14px;
+            line-height: 1.25;
+          }
+
+          .mobile-info-grid {
+            display: grid;
+            grid-template-columns:
+              repeat(2,minmax(0,1fr));
+            gap: 10px;
+            padding: 12px 0;
+          }
+
+          .mobile-info-grid > div {
+            min-width: 0;
+          }
+
+          .mobile-info-grid span {
+            display: block;
+            margin-bottom: 3px;
+            color: #94a3b8;
+            font-size: 9px;
+          }
+
+          .mobile-info-grid strong {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 11px;
+          }
+
+          .mobile-actions {
+            display: grid;
+            grid-template-columns:
+              repeat(2,minmax(0,1fr));
+            gap: 7px;
+            padding-top: 10px;
+            border-top: 1px solid #e2e8f0;
+          }
+
+          .mobile-actions button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            min-height: 36px;
+            border: 1px solid #dbe3ec;
+            border-radius: 9px;
+            background: white;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+          }
+
+          .modal-overlay {
+            align-items: flex-end;
+            padding: 0;
+          }
+
+          .modal-card {
+            max-height: 92vh;
+            padding: 17px;
+            border-radius: 20px 20px 0 0;
+          }
+
+          .modal-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .modal-full {
+            grid-column: span 1;
+          }
+
+          .modal-footer button {
+            width: 100%;
+          }
+        }
+
+        @media (max-width: 380px) {
+
+          .manutencao-page {
+            padding: 7px;
+          }
+
+          .manutencao-stats {
+            gap: 5px;
+          }
+
+          .manutencao-stat {
+            padding: 9px 5px;
+          }
+
+          .manutencao-stat strong {
+            font-size: 20px;
+          }
+
+          .mobile-actions button {
+            font-size: 9px;
+          }
+        }
+
+      `}</style>
     </main>
   );
 }
