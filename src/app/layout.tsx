@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import AppShell from "./components/AppShell";
+import BackgroundSlide from "./components/BackgroundSlide";
 
 export const metadata: Metadata = {
   title: "MasterMec | Gestão de Manutenção",
@@ -15,7 +16,11 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body>
-        <AppShell>{children}</AppShell>
+        <BackgroundSlide />
+
+        <AppShell>
+          {children}
+        </AppShell>
       </body>
     </html>
   );
