@@ -14,6 +14,8 @@ html {
   width: 100%;
   min-height: 100%;
   scroll-behavior: smooth;
+
+  background: transparent !important;
 }
 
 body {
@@ -30,18 +32,7 @@ body {
 
   overflow-x: hidden;
 
-  background:
-    radial-gradient(
-      circle at 10% 0%,
-      rgba(255, 190, 45, 0.16),
-      transparent 30%
-    ),
-    radial-gradient(
-      circle at 100% 10%,
-      rgba(47, 103, 211, 0.12),
-      transparent 30%
-    ),
-    #eef2f7;
+  background: transparent !important;
 }
 
 button,
@@ -67,6 +58,12 @@ a {
 .app-shell {
   width: 100%;
   min-height: 100vh;
+
+  position: relative;
+
+  background: transparent !important;
+
+  z-index: 1;
 }
 
 /* ================================================= */
@@ -613,6 +610,9 @@ a {
 
   transition:
     margin-left .3s ease;
+
+  position: relative;
+  z-index: 2;
 }
 
 .app-main-recolhido {
@@ -763,6 +763,9 @@ a {
 
   padding:
     25px 20px 40px 0;
+
+  position: relative;
+  z-index: 2;
 }
 
 .app-page {
@@ -1459,6 +1462,9 @@ a {
   padding: 0 !important;
 
   background: transparent !important;
+
+  position: relative;
+  z-index: 2;
 }
 
 .voltar {
@@ -2092,6 +2098,7 @@ button,
     background: white !important;
   }
 }
+
 /* ========================================================= */
 /* HISTÓRICO DE MANUTENÇÕES - NOVO VISUAL                   */
 /* ========================================================= */
