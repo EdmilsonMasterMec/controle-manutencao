@@ -9,6 +9,103 @@
   margin: 0;
   padding: 0;
 }
+/* =========================================================
+   BALÃO DOS TÍTULOS PRINCIPAIS DAS PÁGINAS
+   ========================================================= */
+
+.titulo-pagina-balao {
+  display: inline-block;
+  width: fit-content;
+  max-width: calc(100% - 30px);
+
+  margin: 20px 0 20px 0;
+  padding: 18px 28px;
+
+  background: rgba(255, 255, 255, 0.88);
+
+  border: 1px solid rgba(255, 255, 255, 0.95);
+
+  border-radius: 24px;
+
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.18),
+    0 2px 8px rgba(0, 0, 0, 0.10);
+
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+
+  position: relative;
+  z-index: 5;
+}
+
+/* Título dentro do balão */
+.titulo-pagina-balao h1 {
+  margin: 0;
+
+  color: #17233b;
+
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1.1;
+
+  text-shadow: none;
+}
+
+/* Descrição abaixo do título */
+.titulo-pagina-balao p {
+  margin: 8px 0 0 0;
+
+  color: #536078;
+
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.4;
+
+  text-shadow: none;
+}
+
+/* Celular */
+@media (max-width: 768px) {
+  .titulo-pagina-balao {
+    display: block;
+
+    width: calc(100% - 30px);
+    max-width: none;
+
+    margin: 18px 15px 18px 15px;
+    padding: 16px 20px;
+
+    border-radius: 22px;
+  }
+
+  .titulo-pagina-balao h1 {
+    font-size: 34px;
+  }
+
+  .titulo-pagina-balao p {
+    font-size: 17px;
+  }
+}
+
+/* Celulares pequenos */
+@media (max-width: 480px) {
+  .titulo-pagina-balao {
+    margin-left: 12px;
+    margin-right: 12px;
+
+    width: calc(100% - 24px);
+
+    padding: 15px 18px;
+  }
+
+  .titulo-pagina-balao h1 {
+    font-size: 30px;
+  }
+
+  .titulo-pagina-balao p {
+    font-size: 16px;
+  }
+}
 
 html {
   width: 100%;
