@@ -40,24 +40,17 @@ const formInicial: FormMecanico = {
 };
 
 export default function MecanicosPage() {
-  const [mecanicos, setMecanicos] = useState<Mecanico[]>(
-    []
-  );
+  const [mecanicos, setMecanicos] = useState<Mecanico[]>([]);
 
-  const [carregando, setCarregando] =
-    useState(true);
+  const [carregando, setCarregando] = useState(true);
 
-  const [salvando, setSalvando] =
-    useState(false);
+  const [salvando, setSalvando] = useState(false);
 
-  const [mostrarCadastro, setMostrarCadastro] =
-    useState(false);
+  const [mostrarCadastro, setMostrarCadastro] = useState(false);
 
-  const [editandoId, setEditandoId] =
-    useState<number | null>(null);
+  const [editandoId, setEditandoId] = useState<number | null>(null);
 
-  const [form, setForm] =
-    useState<FormMecanico>(formInicial);
+  const [form, setForm] = useState<FormMecanico>(formInicial);
 
   /*
   =====================================================
@@ -103,9 +96,7 @@ export default function MecanicosPage() {
       return;
     }
 
-    setMecanicos(
-      (data || []) as Mecanico[]
-    );
+    setMecanicos((data || []) as Mecanico[]);
 
     setCarregando(false);
   }
@@ -128,19 +119,14 @@ export default function MecanicosPage() {
   =====================================================
   */
 
-  function editarMecanico(
-    mecanico: Mecanico
-  ) {
+  function editarMecanico(mecanico: Mecanico) {
     setEditandoId(mecanico.id);
 
     setForm({
       nome: mecanico.nome || "",
-      especialidade:
-        mecanico.especialidade || "",
-      telefone:
-        mecanico.telefone || "",
-      status:
-        mecanico.status || "Ativo",
+      especialidade: mecanico.especialidade || "",
+      telefone: mecanico.telefone || "",
+      status: mecanico.status || "Ativo",
     });
 
     setMostrarCadastro(true);
@@ -154,16 +140,12 @@ export default function MecanicosPage() {
 
   async function salvarMecanico() {
     if (!form.nome.trim()) {
-      alert(
-        "Informe o nome do mecânico."
-      );
+      alert("Informe o nome do mecânico.");
       return;
     }
 
     if (!form.especialidade.trim()) {
-      alert(
-        "Informe a especialidade do mecânico."
-      );
+      alert("Informe a especialidade do mecânico.");
       return;
     }
 
@@ -181,10 +163,8 @@ export default function MecanicosPage() {
           .from("mecanicos")
           .update({
             nome: form.nome.trim(),
-            especialidade:
-              form.especialidade.trim(),
-            telefone:
-              form.telefone.trim(),
+            especialidade: form.especialidade.trim(),
+            telefone: form.telefone.trim(),
             status: form.status,
           })
           .eq("id", editandoId);
@@ -203,9 +183,7 @@ export default function MecanicosPage() {
           return;
         }
 
-        alert(
-          "Mecânico atualizado com sucesso."
-        );
+        alert("Mecânico atualizado com sucesso.");
       } else {
         /*
         ===============================================
@@ -217,10 +195,8 @@ export default function MecanicosPage() {
           .from("mecanicos")
           .insert({
             nome: form.nome.trim(),
-            especialidade:
-              form.especialidade.trim(),
-            telefone:
-              form.telefone.trim(),
+            especialidade: form.especialidade.trim(),
+            telefone: form.telefone.trim(),
             status: form.status,
           });
 
@@ -238,9 +214,7 @@ export default function MecanicosPage() {
           return;
         }
 
-        alert(
-          "Mecânico cadastrado com sucesso."
-        );
+        alert("Mecânico cadastrado com sucesso.");
       }
 
       /*
@@ -271,9 +245,7 @@ export default function MecanicosPage() {
   =====================================================
   */
 
-  async function alternarStatus(
-    mecanico: Mecanico
-  ) {
+  async function alternarStatus(mecanico: Mecanico) {
     const novoStatus =
       mecanico.status === "Ativo"
         ? "Inativo"
@@ -306,13 +278,10 @@ export default function MecanicosPage() {
   =====================================================
   */
 
-  async function excluirMecanico(
-    mecanico: Mecanico
-  ) {
-    const confirmar =
-      window.confirm(
-        `Deseja realmente excluir este mecânico?\n\n${mecanico.nome}\n\nEsta operação não poderá ser desfeita.`
-      );
+  async function excluirMecanico(mecanico: Mecanico) {
+    const confirmar = window.confirm(
+      `Deseja realmente excluir este mecânico?\n\n${mecanico.nome}\n\nEsta operação não poderá ser desfeita.`
+    );
 
     if (!confirmar) return;
 
@@ -341,17 +310,15 @@ export default function MecanicosPage() {
   =====================================================
   */
 
-  const ativos =
-    mecanicos.filter(
-      (mecanico) =>
-        mecanico.status === "Ativo"
-    ).length;
+  const ativos = mecanicos.filter(
+    (mecanico) =>
+      mecanico.status === "Ativo"
+  ).length;
 
-  const inativos =
-    mecanicos.filter(
-      (mecanico) =>
-        mecanico.status === "Inativo"
-    ).length;
+  const inativos = mecanicos.filter(
+    (mecanico) =>
+      mecanico.status === "Inativo"
+  ).length;
 
   /*
   =====================================================
@@ -371,6 +338,14 @@ export default function MecanicosPage() {
               style={{
                 margin: 0,
                 fontSize: "28px",
+
+                /* ALTERAÇÃO:
+                   TÍTULO BRANCO */
+                color: "#ffffff",
+
+                /* Ajuda na leitura sobre a imagem */
+                textShadow:
+                  "0 2px 6px rgba(0,0,0,0.65)",
               }}
             >
               Mecânicos
@@ -379,11 +354,17 @@ export default function MecanicosPage() {
             <p
               style={{
                 marginTop: "6px",
-                color: "#666",
+
+                /* ALTERAÇÃO:
+                   SUBTÍTULO BRANCO */
+                color: "#ffffff",
+
+                /* Ajuda na leitura sobre a imagem */
+                textShadow:
+                  "0 2px 5px rgba(0,0,0,0.70)",
               }}
             >
-              Cadastro e controle da
-              equipe técnica
+              Cadastro e controle da equipe técnica
             </p>
           </div>
 
@@ -404,31 +385,19 @@ export default function MecanicosPage() {
             <div
               style={{
                 ...iconeResumoStyle,
-                background:
-                  "#e8f1ff",
-                color:
-                  "#2563a8",
+                background: "#e8f1ff",
+                color: "#2563a8",
               }}
             >
-              <UserRound
-                size={24}
-              />
+              <UserRound size={24} />
             </div>
 
             <div>
-              <span
-                style={
-                  resumoTituloStyle
-                }
-              >
+              <span style={resumoTituloStyle}>
                 Total de mecânicos
               </span>
 
-              <strong
-                style={
-                  resumoNumeroStyle
-                }
-              >
+              <strong style={resumoNumeroStyle}>
                 {mecanicos.length}
               </strong>
             </div>
@@ -438,31 +407,19 @@ export default function MecanicosPage() {
             <div
               style={{
                 ...iconeResumoStyle,
-                background:
-                  "#e4f7e9",
-                color:
-                  "#23844a",
+                background: "#e4f7e9",
+                color: "#23844a",
               }}
             >
-              <CheckCircle2
-                size={24}
-              />
+              <CheckCircle2 size={24} />
             </div>
 
             <div>
-              <span
-                style={
-                  resumoTituloStyle
-                }
-              >
+              <span style={resumoTituloStyle}>
                 Mecânicos ativos
               </span>
 
-              <strong
-                style={
-                  resumoNumeroStyle
-                }
-              >
+              <strong style={resumoNumeroStyle}>
                 {ativos}
               </strong>
             </div>
@@ -472,31 +429,19 @@ export default function MecanicosPage() {
             <div
               style={{
                 ...iconeResumoStyle,
-                background:
-                  "#f8e6e6",
-                color:
-                  "#b53b3b",
+                background: "#f8e6e6",
+                color: "#b53b3b",
               }}
             >
-              <CircleOff
-                size={24}
-              />
+              <CircleOff size={24} />
             </div>
 
             <div>
-              <span
-                style={
-                  resumoTituloStyle
-                }
-              >
+              <span style={resumoTituloStyle}>
                 Inativos
               </span>
 
-              <strong
-                style={
-                  resumoNumeroStyle
-                }
-              >
+              <strong style={resumoNumeroStyle}>
                 {inativos}
               </strong>
             </div>
@@ -507,33 +452,22 @@ export default function MecanicosPage() {
         {/* TABELA */}
 
         {carregando ? (
-          <div
-            style={
-              mensagemStyle
-            }
-          >
+          <div style={mensagemStyle}>
             Carregando mecânicos...
           </div>
         ) : mecanicos.length === 0 ? (
-          <div
-            style={
-              mensagemStyle
-            }
-          >
+          <div style={mensagemStyle}>
             <UserRound
               size={40}
               color="#aaa"
             />
 
             <p>
-              Nenhum mecânico
-              cadastrado.
+              Nenhum mecânico cadastrado.
             </p>
 
             <button
-              onClick={
-                abrirNovoCadastro
-              }
+              onClick={abrirNovoCadastro}
               style={botaoPreto}
             >
               <Plus size={18} />
@@ -541,49 +475,27 @@ export default function MecanicosPage() {
             </button>
           </div>
         ) : (
-          <div
-            style={
-              tabelaBoxStyle
-            }
-          >
-            <table
-              style={
-                tabelaStyle
-              }
-            >
+          <div style={tabelaBoxStyle}>
+            <table style={tabelaStyle}>
               <thead>
-                <tr
-                  style={
-                    cabecalhoTabelaStyle
-                  }
-                >
-                  <th
-                    style={thStyle}
-                  >
+                <tr style={cabecalhoTabelaStyle}>
+                  <th style={thStyle}>
                     Mecânico
                   </th>
 
-                  <th
-                    style={thStyle}
-                  >
+                  <th style={thStyle}>
                     Especialidade
                   </th>
 
-                  <th
-                    style={thStyle}
-                  >
+                  <th style={thStyle}>
                     Telefone
                   </th>
 
-                  <th
-                    style={thStyle}
-                  >
+                  <th style={thStyle}>
                     Status
                   </th>
 
-                  <th
-                    style={thStyle}
-                  >
+                  <th style={thStyle}>
                     Ações
                   </th>
                 </tr>
@@ -593,57 +505,35 @@ export default function MecanicosPage() {
                 {mecanicos.map(
                   (mecanico) => (
                     <tr
-                      key={
-                        mecanico.id
-                      }
+                      key={mecanico.id}
                       style={{
                         borderTop:
                           "1px solid #eee",
                       }}
                     >
-                      <td
-                        style={
-                          tdStyle
-                        }
-                      >
+                      <td style={tdStyle}>
                         <div
                           style={{
-                            display:
-                              "flex",
-                            alignItems:
-                              "center",
+                            display: "flex",
+                            alignItems: "center",
                             gap: "10px",
                           }}
                         >
-                          <div
-                            style={
-                              avatarStyle
-                            }
-                          >
-                            <UserRound
-                              size={18}
-                            />
+                          <div style={avatarStyle}>
+                            <UserRound size={18} />
                           </div>
 
                           <strong>
-                            {
-                              mecanico.nome
-                            }
+                            {mecanico.nome}
                           </strong>
                         </div>
                       </td>
 
-                      <td
-                        style={
-                          tdStyle
-                        }
-                      >
+                      <td style={tdStyle}>
                         <div
                           style={{
-                            display:
-                              "flex",
-                            alignItems:
-                              "center",
+                            display: "flex",
+                            alignItems: "center",
                             gap: "7px",
                           }}
                         >
@@ -652,24 +542,16 @@ export default function MecanicosPage() {
                             color="#777"
                           />
 
-                          {
-                            mecanico.especialidade
-                          }
+                          {mecanico.especialidade}
                         </div>
                       </td>
 
-                      <td
-                        style={
-                          tdStyle
-                        }
-                      >
+                      <td style={tdStyle}>
                         {mecanico.telefone ? (
                           <div
                             style={{
-                              display:
-                                "flex",
-                              alignItems:
-                                "center",
+                              display: "flex",
+                              alignItems: "center",
                               gap: "7px",
                             }}
                           >
@@ -678,20 +560,14 @@ export default function MecanicosPage() {
                               color="#777"
                             />
 
-                            {
-                              mecanico.telefone
-                            }
+                            {mecanico.telefone}
                           </div>
                         ) : (
                           "-"
                         )}
                       </td>
 
-                      <td
-                        style={
-                          tdStyle
-                        }
-                      >
+                      <td style={tdStyle}>
                         <button
                           onClick={() =>
                             alternarStatus(
@@ -702,21 +578,14 @@ export default function MecanicosPage() {
                             mecanico.status
                           )}
                         >
-                          {
-                            mecanico.status
-                          }
+                          {mecanico.status}
                         </button>
                       </td>
 
-                      <td
-                        style={
-                          tdStyle
-                        }
-                      >
+                      <td style={tdStyle}>
                         <div
                           style={{
-                            display:
-                              "flex",
+                            display: "flex",
                             gap: "7px",
                           }}
                         >
@@ -727,13 +596,9 @@ export default function MecanicosPage() {
                                 mecanico
                               )
                             }
-                            style={
-                              acaoStyle
-                            }
+                            style={acaoStyle}
                           >
-                            <Pencil
-                              size={17}
-                            />
+                            <Pencil size={17} />
                           </button>
 
                           <button
@@ -751,9 +616,7 @@ export default function MecanicosPage() {
                                 "#b00000",
                             }}
                           >
-                            <Trash2
-                              size={17}
-                            />
+                            <Trash2 size={17} />
                           </button>
                         </div>
                       </td>
@@ -768,83 +631,49 @@ export default function MecanicosPage() {
         {/* MODAL */}
 
         {mostrarCadastro && (
-          <div
-            style={
-              modalFundoStyle
-            }
-          >
-            <div
-              style={
-                modalStyle
-              }
-            >
-              <div
-                style={
-                  modalTopoStyle
-                }
-              >
+          <div style={modalFundoStyle}>
+            <div style={modalStyle}>
+              <div style={modalTopoStyle}>
                 <div>
                   <h2
                     style={{
                       margin: 0,
                     }}
                   >
-                    {editandoId !==
-                    null
+                    {editandoId !== null
                       ? "Editar mecânico"
                       : "Novo mecânico"}
                   </h2>
 
                   <p
                     style={{
-                      margin:
-                        "5px 0 0",
-                      color:
-                        "#777",
-                      fontSize:
-                        "14px",
+                      margin: "5px 0 0",
+                      color: "#777",
+                      fontSize: "14px",
                     }}
                   >
-                    Preencha os
-                    dados da
-                    equipe
-                    técnica.
+                    Preencha os dados da
+                    equipe técnica.
                   </p>
                 </div>
 
                 <button
                   onClick={() => {
-                    setMostrarCadastro(
-                      false
-                    );
-                    setEditandoId(
-                      null
-                    );
-                    setForm(
-                      formInicial
-                    );
+                    setMostrarCadastro(false);
+                    setEditandoId(null);
+                    setForm(formInicial);
                   }}
-                  style={
-                    fecharStyle
-                  }
+                  style={fecharStyle}
                 >
                   <X size={19} />
                 </button>
               </div>
 
-              <div
-                style={
-                  formGridStyle
-                }
-              >
+              <div style={formGridStyle}>
                 <Campo
                   label="Nome completo"
-                  value={
-                    form.nome
-                  }
-                  onChange={(
-                    valor
-                  ) =>
+                  value={form.nome}
+                  onChange={(valor) =>
                     setForm({
                       ...form,
                       nome: valor,
@@ -854,12 +683,8 @@ export default function MecanicosPage() {
 
                 <Campo
                   label="Especialidade"
-                  value={
-                    form.especialidade
-                  }
-                  onChange={(
-                    valor
-                  ) =>
+                  value={form.especialidade}
+                  onChange={(valor) =>
                     setForm({
                       ...form,
                       especialidade:
@@ -870,33 +695,22 @@ export default function MecanicosPage() {
 
                 <Campo
                   label="Telefone"
-                  value={
-                    form.telefone
-                  }
-                  onChange={(
-                    valor
-                  ) =>
+                  value={form.telefone}
+                  onChange={(valor) =>
                     setForm({
                       ...form,
-                      telefone:
-                        valor,
+                      telefone: valor,
                     })
                   }
                 />
 
                 <div>
-                  <label
-                    style={
-                      labelStyle
-                    }
-                  >
+                  <label style={labelStyle}>
                     Status
                   </label>
 
                   <select
-                    value={
-                      form.status
-                    }
+                    value={form.status}
                     onChange={(e) =>
                       setForm({
                         ...form,
@@ -907,9 +721,7 @@ export default function MecanicosPage() {
                             | "Inativo",
                       })
                     }
-                    style={
-                      inputStyle
-                    }
+                    style={inputStyle}
                   >
                     <option value="Ativo">
                       Ativo
@@ -923,31 +735,21 @@ export default function MecanicosPage() {
               </div>
 
               <button
-                onClick={
-                  salvarMecanico
-                }
-                disabled={
-                  salvando
-                }
+                onClick={salvarMecanico}
+                disabled={salvando}
                 style={{
                   ...botaoPreto,
                   width: "100%",
-                  justifyContent:
-                    "center",
-                  marginTop:
-                    "25px",
-                  opacity:
-                    salvando
-                      ? 0.7
-                      : 1,
+                  justifyContent: "center",
+                  marginTop: "25px",
+                  opacity: salvando ? 0.7 : 1,
                 }}
               >
                 <Save size={19} />
 
                 {salvando
                   ? "Salvando..."
-                  : editandoId !==
-                    null
+                  : editandoId !== null
                   ? "Salvar alterações"
                   : "Salvar mecânico"}
               </button>
@@ -970,30 +772,20 @@ function Campo({
 }: {
   label: string;
   value: string;
-  onChange: (
-    valor: string
-  ) => void;
+  onChange: (valor: string) => void;
 }) {
   return (
     <div>
-      <label
-        style={
-          labelStyle
-        }
-      >
+      <label style={labelStyle}>
         {label}
       </label>
 
       <input
         value={value}
         onChange={(e) =>
-          onChange(
-            e.target.value
-          )
+          onChange(e.target.value)
         }
-        style={
-          inputStyle
-        }
+        style={inputStyle}
       />
     </div>
   );
@@ -1003,369 +795,228 @@ function Campo({
    ESTILOS
 ===================================================== */
 
-const containerStyle: React.CSSProperties =
-  {
-    padding: "25px",
-    maxWidth: "1600px",
-    margin: "0 auto",
-  };
+const containerStyle: React.CSSProperties = {
+  padding: "25px",
+  maxWidth: "1600px",
+  margin: "0 auto",
+};
 
-const topoStyle: React.CSSProperties =
-  {
-    display: "flex",
-    justifyContent:
-      "space-between",
-    alignItems: "center",
-    gap: "15px",
-    flexWrap: "wrap",
-    marginBottom:
-      "25px",
-  };
+const topoStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: "15px",
+  flexWrap: "wrap",
+  marginBottom: "25px",
+};
 
-const botaoPreto: React.CSSProperties =
-  {
-    display: "flex",
-    alignItems:
-      "center",
-    justifyContent:
-      "center",
-    gap: "8px",
-    background:
-      "#222",
-    color: "#fff",
-    border: "none",
-    padding:
-      "12px 18px",
-    borderRadius:
-      "8px",
-    cursor:
-      "pointer",
-    fontWeight: 600,
-  };
+const botaoPreto: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "8px",
+  background: "#222",
+  color: "#fff",
+  border: "none",
+  padding: "12px 18px",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontWeight: 600,
+};
 
-const resumoGridStyle: React.CSSProperties =
-  {
-    display: "grid",
-    gridTemplateColumns:
-      "repeat(auto-fit,minmax(220px,1fr))",
-    gap: "15px",
-    marginBottom:
-      "25px",
-  };
+const resumoGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns:
+    "repeat(auto-fit,minmax(220px,1fr))",
+  gap: "15px",
+  marginBottom: "25px",
+};
 
-const resumoCardStyle: React.CSSProperties =
-  {
-    background:
-      "#fff",
-    borderRadius:
-      "12px",
-    padding:
-      "18px",
-    display:
-      "flex",
-    alignItems:
-      "center",
-    gap: "15px",
-    border:
-      "1px solid #eee",
-    boxShadow:
-      "0 2px 10px rgba(0,0,0,.05)",
-  };
+const resumoCardStyle: React.CSSProperties = {
+  background: "#fff",
+  borderRadius: "12px",
+  padding: "18px",
+  display: "flex",
+  alignItems: "center",
+  gap: "15px",
+  border: "1px solid #eee",
+  boxShadow:
+    "0 2px 10px rgba(0,0,0,.05)",
+};
 
-const iconeResumoStyle: React.CSSProperties =
-  {
-    width: "50px",
-    height: "50px",
-    borderRadius:
-      "12px",
-    display:
-      "flex",
-    alignItems:
-      "center",
-    justifyContent:
-      "center",
-    flexShrink: 0,
-  };
+const iconeResumoStyle: React.CSSProperties = {
+  width: "50px",
+  height: "50px",
+  borderRadius: "12px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
+};
 
-const resumoTituloStyle: React.CSSProperties =
-  {
-    display:
-      "block",
-    color:
-      "#777",
-    fontSize:
-      "13px",
-    marginBottom:
-      "3px",
-  };
+const resumoTituloStyle: React.CSSProperties = {
+  display: "block",
+  color: "#777",
+  fontSize: "13px",
+  marginBottom: "3px",
+};
 
-const resumoNumeroStyle: React.CSSProperties =
-  {
-    display:
-      "block",
-    fontSize:
-      "24px",
-    color:
-      "#172033",
-  };
+const resumoNumeroStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: "24px",
+  color: "#172033",
+};
 
-const mensagemStyle: React.CSSProperties =
-  {
-    background:
-      "#fff",
-    borderRadius:
-      "12px",
-    padding:
-      "50px 25px",
-    textAlign:
-      "center",
-    display:
-      "flex",
-    flexDirection:
-      "column",
-    alignItems:
-      "center",
-    gap:
-      "12px",
-  };
+const mensagemStyle: React.CSSProperties = {
+  background: "#fff",
+  borderRadius: "12px",
+  padding: "50px 25px",
+  textAlign: "center",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  gap: "12px",
+};
 
-const tabelaBoxStyle: React.CSSProperties =
-  {
-    background:
-      "#fff",
-    borderRadius:
-      "12px",
-    overflowX:
-      "auto",
-    boxShadow:
-      "0 2px 10px rgba(0,0,0,.06)",
-  };
+const tabelaBoxStyle: React.CSSProperties = {
+  background: "#fff",
+  borderRadius: "12px",
+  overflowX: "auto",
+  boxShadow:
+    "0 2px 10px rgba(0,0,0,.06)",
+};
 
-const tabelaStyle: React.CSSProperties =
-  {
-    width:
-      "100%",
-    borderCollapse:
-      "collapse",
-    minWidth:
-      "850px",
-  };
+const tabelaStyle: React.CSSProperties = {
+  width: "100%",
+  borderCollapse: "collapse",
+  minWidth: "850px",
+};
 
-const cabecalhoTabelaStyle: React.CSSProperties =
-  {
-    background:
-      "#f4f4f4",
-    textAlign:
-      "left",
-  };
+const cabecalhoTabelaStyle: React.CSSProperties = {
+  background: "#f4f4f4",
+  textAlign: "left",
+};
 
-const thStyle: React.CSSProperties =
-  {
-    padding:
-      "14px",
-    whiteSpace:
-      "nowrap",
-    fontSize:
-      "13px",
-  };
+const thStyle: React.CSSProperties = {
+  padding: "14px",
+  whiteSpace: "nowrap",
+  fontSize: "13px",
+};
 
-const tdStyle: React.CSSProperties =
-  {
-    padding:
-      "14px",
-    verticalAlign:
-      "middle",
-    fontSize:
-      "14px",
-  };
+const tdStyle: React.CSSProperties = {
+  padding: "14px",
+  verticalAlign: "middle",
+  fontSize: "14px",
+};
 
-const avatarStyle: React.CSSProperties =
-  {
-    width:
-      "36px",
-    height:
-      "36px",
-    borderRadius:
-      "50%",
-    background:
-      "#edf3ff",
-    color:
-      "#2864a6",
-    display:
-      "flex",
-    alignItems:
-      "center",
-    justifyContent:
-      "center",
-    flexShrink:
-      0,
-  };
+const avatarStyle: React.CSSProperties = {
+  width: "36px",
+  height: "36px",
+  borderRadius: "50%",
+  background: "#edf3ff",
+  color: "#2864a6",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
+};
 
-const acaoStyle: React.CSSProperties =
-  {
-    width:
-      "36px",
-    height:
-      "36px",
-    border:
-      "none",
-    borderRadius:
-      "7px",
-    background:
-      "#eee",
-    cursor:
-      "pointer",
-    display:
-      "flex",
-    alignItems:
-      "center",
-    justifyContent:
-      "center",
-  };
+const acaoStyle: React.CSSProperties = {
+  width: "36px",
+  height: "36px",
+  border: "none",
+  borderRadius: "7px",
+  background: "#eee",
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
 
-const modalFundoStyle: React.CSSProperties =
-  {
-    position:
-      "fixed",
-    inset: 0,
-    background:
-      "rgba(0,0,0,.55)",
-    display:
-      "flex",
-    alignItems:
-      "center",
-    justifyContent:
-      "center",
-    padding:
-      "20px",
-    zIndex:
-      9999,
-  };
+const modalFundoStyle: React.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,.55)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "20px",
+  zIndex: 9999,
+};
 
-const modalStyle: React.CSSProperties =
-  {
-    background:
-      "#fff",
-    borderRadius:
-      "12px",
-    padding:
-      "25px",
-    width:
-      "100%",
-    maxWidth:
-      "700px",
-    maxHeight:
-      "90vh",
-    overflowY:
-      "auto",
-  };
+const modalStyle: React.CSSProperties = {
+  background: "#fff",
+  borderRadius: "12px",
+  padding: "25px",
+  width: "100%",
+  maxWidth: "700px",
+  maxHeight: "90vh",
+  overflowY: "auto",
+};
 
-const modalTopoStyle: React.CSSProperties =
-  {
-    display:
-      "flex",
-    justifyContent:
-      "space-between",
-    alignItems:
-      "center",
-    marginBottom:
-      "25px",
-    gap:
-      "15px",
-  };
+const modalTopoStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: "25px",
+  gap: "15px",
+};
 
-const fecharStyle: React.CSSProperties =
-  {
-    border:
-      "none",
-    background:
-      "#eee",
-    width:
-      "38px",
-    height:
-      "38px",
-    borderRadius:
-      "50%",
-    cursor:
-      "pointer",
-    display:
-      "flex",
-    alignItems:
-      "center",
-    justifyContent:
-      "center",
-    flexShrink:
-      0,
-  };
+const fecharStyle: React.CSSProperties = {
+  border: "none",
+  background: "#eee",
+  width: "38px",
+  height: "38px",
+  borderRadius: "50%",
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
+};
 
-const formGridStyle: React.CSSProperties =
-  {
-    display:
-      "grid",
-    gridTemplateColumns:
-      "repeat(auto-fit,minmax(220px,1fr))",
-    gap:
-      "15px",
-  };
+const formGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns:
+    "repeat(auto-fit,minmax(220px,1fr))",
+  gap: "15px",
+};
 
-const labelStyle: React.CSSProperties =
-  {
-    display:
-      "block",
-    fontSize:
-      "13px",
-    fontWeight:
-      600,
-    color:
-      "#333",
-  };
+const labelStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: "13px",
+  fontWeight: 600,
+  color: "#333",
+};
 
-const inputStyle: React.CSSProperties =
-  {
-    width:
-      "100%",
-    marginTop:
-      "6px",
-    padding:
-      "11px",
-    border:
-      "1px solid #ccc",
-    borderRadius:
-      "7px",
-    outline:
-      "none",
-    fontSize:
-      "14px",
-    background:
-      "#fff",
-  };
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  marginTop: "6px",
+  padding: "11px",
+  border: "1px solid #ccc",
+  borderRadius: "7px",
+  outline: "none",
+  fontSize: "14px",
+  background: "#fff",
+};
 
 function statusStyle(
   status: string
 ): React.CSSProperties {
-  const ativo =
-    status === "Ativo";
+  const ativo = status === "Ativo";
 
   return {
-    border:
-      "none",
-    padding:
-      "6px 11px",
-    borderRadius:
-      "20px",
-    background:
-      ativo
-        ? "#dff5e3"
-        : "#f5dada",
-    color:
-      ativo
-        ? "#20733d"
-        : "#a32e2e",
-    fontWeight:
-      600,
-    fontSize:
-      "12px",
-    cursor:
-      "pointer",
+    border: "none",
+    padding: "6px 11px",
+    borderRadius: "20px",
+    background: ativo
+      ? "#dff5e3"
+      : "#f5dada",
+    color: ativo
+      ? "#20733d"
+      : "#a32e2e",
+    fontWeight: 600,
+    fontSize: "12px",
+    cursor: "pointer",
   };
 }
