@@ -1580,7 +1580,7 @@ a {
 }
 
 .page-header h1 {
-  color: #172033 !important;
+  color: #ffffff !important;
 
   font-size:
     clamp(24px,3vw,32px) !important;
@@ -1588,14 +1588,22 @@ a {
   font-weight: 800;
 
   line-height: 1.15;
+
+  text-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.65);
 }
 
 .page-header p {
   margin-top: 6px;
 
-  color: #718095 !important;
+  color: #ffffff !important;
 
   font-size: 12px !important;
+
+  font-weight: 500;
+
+  text-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.65);
 }
 
 /* ================================================= */
