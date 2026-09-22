@@ -41,22 +41,11 @@ const formInicial: FormMecanico = {
 
 export default function MecanicosPage() {
   const [mecanicos, setMecanicos] = useState<Mecanico[]>([]);
-
   const [carregando, setCarregando] = useState(true);
-
   const [salvando, setSalvando] = useState(false);
-
   const [mostrarCadastro, setMostrarCadastro] = useState(false);
-
   const [editandoId, setEditandoId] = useState<number | null>(null);
-
   const [form, setForm] = useState<FormMecanico>(formInicial);
-
-  /*
-  =====================================================
-  CARREGAR MECÂNICOS DO SUPABASE
-  =====================================================
-  */
 
   useEffect(() => {
     carregarMecanicos();
@@ -82,10 +71,7 @@ export default function MecanicosPage() {
       });
 
     if (error) {
-      console.error(
-        "Erro ao carregar mecânicos:",
-        error
-      );
+      console.error("Erro ao carregar mecânicos:", error);
 
       alert(
         "Erro ao carregar os mecânicos:\n\n" +
@@ -101,23 +87,11 @@ export default function MecanicosPage() {
     setCarregando(false);
   }
 
-  /*
-  =====================================================
-  NOVO MECÂNICO
-  =====================================================
-  */
-
   function abrirNovoCadastro() {
     setEditandoId(null);
     setForm(formInicial);
     setMostrarCadastro(true);
   }
-
-  /*
-  =====================================================
-  EDITAR MECÂNICO
-  =====================================================
-  */
 
   function editarMecanico(mecanico: Mecanico) {
     setEditandoId(mecanico.id);
@@ -131,12 +105,6 @@ export default function MecanicosPage() {
 
     setMostrarCadastro(true);
   }
-
-  /*
-  =====================================================
-  SALVAR MECÂNICO
-  =====================================================
-  */
 
   async function salvarMecanico() {
     if (!form.nome.trim()) {
@@ -152,12 +120,6 @@ export default function MecanicosPage() {
     setSalvando(true);
 
     try {
-      /*
-      =================================================
-      ATUALIZAÇÃO
-      =================================================
-      */
-
       if (editandoId !== null) {
         const { error } = await supabase
           .from("mecanicos")
@@ -185,12 +147,6 @@ export default function MecanicosPage() {
 
         alert("Mecânico atualizado com sucesso.");
       } else {
-        /*
-        ===============================================
-        NOVO CADASTRO
-        ===============================================
-        */
-
         const { error } = await supabase
           .from("mecanicos")
           .insert({
@@ -217,33 +173,15 @@ export default function MecanicosPage() {
         alert("Mecânico cadastrado com sucesso.");
       }
 
-      /*
-      ===============================================
-      LIMPA FORMULÁRIO
-      ===============================================
-      */
-
       setForm(formInicial);
       setEditandoId(null);
       setMostrarCadastro(false);
-
-      /*
-      ===============================================
-      BUSCA NOVAMENTE NO SUPABASE
-      ===============================================
-      */
 
       await carregarMecanicos();
     } finally {
       setSalvando(false);
     }
   }
-
-  /*
-  =====================================================
-  ALTERAR STATUS
-  =====================================================
-  */
 
   async function alternarStatus(mecanico: Mecanico) {
     const novoStatus =
@@ -272,12 +210,6 @@ export default function MecanicosPage() {
     await carregarMecanicos();
   }
 
-  /*
-  =====================================================
-  EXCLUIR
-  =====================================================
-  */
-
   async function excluirMecanico(mecanico: Mecanico) {
     const confirmar = window.confirm(
       `Deseja realmente excluir este mecânico?\n\n${mecanico.nome}\n\nEsta operação não poderá ser desfeita.`
@@ -304,12 +236,6 @@ export default function MecanicosPage() {
     await carregarMecanicos();
   }
 
-  /*
-  =====================================================
-  RESUMOS
-  =====================================================
-  */
-
   const ativos = mecanicos.filter(
     (mecanico) =>
       mecanico.status === "Ativo"
@@ -319,12 +245,6 @@ export default function MecanicosPage() {
     (mecanico) =>
       mecanico.status === "Inativo"
   ).length;
-
-  /*
-  =====================================================
-  INTERFACE
-  =====================================================
-  */
 
   return (
     <main className="mastermec-app">
@@ -338,14 +258,11 @@ export default function MecanicosPage() {
               style={{
                 margin: 0,
                 fontSize: "28px",
-
-                /* ALTERAÇÃO:
-                   TÍTULO BRANCO */
                 color: "#ffffff",
-
-                /* Ajuda na leitura sobre a imagem */
+                fontWeight: 800,
+                opacity: 1,
                 textShadow:
-                  "0 2px 6px rgba(0,0,0,0.65)",
+                  "0 2px 6px rgba(0,0,0,0.85)",
               }}
             >
               Mecânicos
@@ -354,14 +271,12 @@ export default function MecanicosPage() {
             <p
               style={{
                 marginTop: "6px",
-
-                /* ALTERAÇÃO:
-                   SUBTÍTULO BRANCO */
                 color: "#ffffff",
-
-                /* Ajuda na leitura sobre a imagem */
+                fontSize: "15px",
+                fontWeight: 500,
+                opacity: 1,
                 textShadow:
-                  "0 2px 5px rgba(0,0,0,0.70)",
+                  "0 2px 6px rgba(0,0,0,0.85)",
               }}
             >
               Cadastro e controle da equipe técnica
@@ -761,10 +676,6 @@ export default function MecanicosPage() {
   );
 }
 
-/* =====================================================
-   CAMPO
-===================================================== */
-
 function Campo({
   label,
   value,
@@ -791,23 +702,27 @@ function Campo({
   );
 }
 
-/* =====================================================
-   ESTILOS
-===================================================== */
-
 const containerStyle: React.CSSProperties = {
+  position: "relative",
+  zIndex: 10,
+
   padding: "25px",
   maxWidth: "1600px",
   margin: "0 auto",
 };
 
 const topoStyle: React.CSSProperties = {
+  position: "relative",
+  zIndex: 20,
+
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
   gap: "15px",
   flexWrap: "wrap",
   marginBottom: "25px",
+
+  width: "100%",
 };
 
 const botaoPreto: React.CSSProperties = {
