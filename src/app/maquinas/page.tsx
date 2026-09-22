@@ -243,12 +243,9 @@ function obterTodasFotos(manutencao: Manutencao): FotoServico[] {
 
 export default function EquipamentosPage() {
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
-
   const [manutencoes, setManutencoes] = useState<Manutencao[]>([]);
-
   const [busca, setBusca] = useState("");
   const [carregando, setCarregando] = useState(true);
-
   const [mostrarCadastro, setMostrarCadastro] = useState(false);
 
   const [
@@ -334,19 +331,6 @@ export default function EquipamentosPage() {
 
     setEquipamentos(equipamentosCarregados);
     setManutencoes(manutencoesCarregadas);
-
-    /*
-      ======================================================
-      QR CODE
-
-      Se a página foi aberta por:
-
-      /maquinas?id=123
-
-      procuramos o equipamento 123 e abrimos
-      automaticamente o resumo dele.
-      ======================================================
-    */
 
     if (typeof window !== "undefined") {
       const parametros =
@@ -1819,7 +1803,16 @@ export default function EquipamentosPage() {
 
             <div>
 
-              <h1 style={{ margin: 0 }}>
+              <h1
+                style={{
+                  margin: 0,
+                  color: "#ffffff",
+                  fontWeight: 800,
+                  opacity: 1,
+                  textShadow:
+                    "0 2px 6px rgba(0,0,0,0.85)",
+                }}
+              >
                 {
                   equipamentoSelecionado.fabricante
                 }{" "}
@@ -1830,7 +1823,12 @@ export default function EquipamentosPage() {
 
               <p
                 style={{
-                  color: "#666",
+                  marginTop: "6px",
+                  color: "#ffffff",
+                  fontWeight: 500,
+                  opacity: 1,
+                  textShadow:
+                    "0 2px 6px rgba(0,0,0,0.85)",
                 }}
               >
                 {
@@ -1875,10 +1873,6 @@ export default function EquipamentosPage() {
             </div>
 
           </div>
-
-          {/* =================================================
-              QR CODE
-          ================================================= */}
 
           <div style={qrBoxStyle}>
 
@@ -1999,10 +1993,6 @@ export default function EquipamentosPage() {
 
           </div>
 
-          {/* =================================================
-              DADOS DO EQUIPAMENTO
-          ================================================= */}
-
           <div style={cardsStyle}>
 
             <InfoCard
@@ -2076,10 +2066,6 @@ export default function EquipamentosPage() {
             />
 
           </div>
-
-          {/* =================================================
-              HISTÓRICO
-          ================================================= */}
 
           <div style={historicoBoxStyle}>
 
@@ -2162,8 +2148,6 @@ export default function EquipamentosPage() {
                         />
 
                       </div>
-
-                      {/* SERVIÇOS */}
 
                       {servicos.length >
                         0 && (
@@ -2389,13 +2373,28 @@ export default function EquipamentosPage() {
 
           <div>
 
-            <h1 style={{ margin: 0 }}>
+            <h1
+              style={{
+                margin: 0,
+                color: "#ffffff",
+                fontWeight: 800,
+                opacity: 1,
+                textShadow:
+                  "0 2px 6px rgba(0,0,0,0.85)",
+              }}
+            >
               Equipamentos
             </h1>
 
             <p
               style={{
-                color: "#666",
+                marginTop: "6px",
+                color: "#ffffff",
+                fontSize: "15px",
+                fontWeight: 500,
+                opacity: 1,
+                textShadow:
+                  "0 2px 6px rgba(0,0,0,0.85)",
               }}
             >
               {equipamentos.length}{" "}
@@ -2746,10 +2745,6 @@ export default function EquipamentosPage() {
           </div>
 
         )}
-
-        {/* =================================================
-            MODAL
-        ================================================= */}
 
         {mostrarCadastro && (
 
@@ -3110,18 +3105,26 @@ function InfoCard({
 ========================================================= */
 
 const containerStyle: React.CSSProperties = {
+  position: "relative",
+  zIndex: 10,
+
   padding: "25px",
   maxWidth: "1600px",
   margin: "0 auto",
 };
 
 const topoStyle: React.CSSProperties = {
+  position: "relative",
+  zIndex: 20,
+
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
   gap: "15px",
   flexWrap: "wrap",
   marginBottom: "25px",
+
+  width: "100%",
 };
 
 const botaoPreto: React.CSSProperties = {
