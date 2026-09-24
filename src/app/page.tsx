@@ -315,6 +315,10 @@ export default function DashboardPage() {
     <main className="dashboard-page">
       <div className="dashboard-container">
 
+        {/* ================================
+            CABEÇALHO
+        ================================= */}
+
         <header className="dashboard-header">
 
           <div className="dashboard-title-area">
@@ -324,23 +328,35 @@ export default function DashboardPage() {
             </div>
 
             <div>
-              <h1>Dashboard</h1>
+
+              <h1>
+                Dashboard
+              </h1>
 
               <p>
                 Visão geral da frota e das manutenções
               </p>
+
             </div>
 
           </div>
 
           <div className="dashboard-online">
+
             <span />
+
             Sistema Online
+
           </div>
 
         </header>
 
+        {/* ================================
+            ERRO
+        ================================= */}
+
         {erro && (
+
           <div className="dashboard-error">
 
             <AlertTriangle size={22} />
@@ -351,11 +367,14 @@ export default function DashboardPage() {
                 Erro ao carregar o Dashboard
               </strong>
 
-              <p>{erro}</p>
+              <p>
+                {erro}
+              </p>
 
             </div>
 
           </div>
+
         )}
 
         {carregando ? (
@@ -400,7 +419,9 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="stat-icon">
+
                     <Construction size={25} />
+
                   </div>
 
                 </div>
@@ -428,7 +449,9 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="stat-icon">
+
                     <CheckCircle2 size={25} />
+
                   </div>
 
                 </div>
@@ -456,7 +479,9 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="stat-icon">
+
                     <Wrench size={25} />
+
                   </div>
 
                 </div>
@@ -484,7 +509,9 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="stat-icon">
+
                     <XCircle size={25} />
+
                   </div>
 
                 </div>
@@ -506,7 +533,9 @@ export default function DashboardPage() {
               <div className="mini-card">
 
                 <div className="mini-icon">
+
                   <Settings size={23} />
+
                 </div>
 
                 <div>
@@ -526,7 +555,9 @@ export default function DashboardPage() {
               <div className="mini-card">
 
                 <div className="mini-icon orange">
+
                   <Wrench size={23} />
+
                 </div>
 
                 <div>
@@ -546,7 +577,9 @@ export default function DashboardPage() {
               <div className="mini-card">
 
                 <div className="mini-icon blue">
+
                   <CalendarDays size={23} />
+
                 </div>
 
                 <div>
@@ -566,7 +599,8 @@ export default function DashboardPage() {
             </section>
 
             {/* ================================
-                MANUTENÇÃO / PRÓXIMAS
+                EQUIPAMENTOS EM MANUTENÇÃO
+                E PRÓXIMAS MANUTENÇÕES
             ================================= */}
 
             <section className="two-columns">
@@ -621,7 +655,9 @@ export default function DashboardPage() {
                         >
 
                           <div className="equipment-icon">
+
                             <Wrench size={20} />
+
                           </div>
 
                           <div className="equipment-info">
@@ -633,18 +669,23 @@ export default function DashboardPage() {
                             </strong>
 
                             <span>
+
                               {equipamento.fabricante}{" "}
                               {equipamento.modelo}
+
                             </span>
 
                             {equipamento
                               .numero_serie_chassi && (
 
                               <small>
+
                                 Série:{" "}
+
                                 {
                                   equipamento.numero_serie_chassi
                                 }
+
                               </small>
 
                             )}
@@ -652,7 +693,9 @@ export default function DashboardPage() {
                           </div>
 
                           <span className="status-badge maintenance">
+
                             Em manutenção
+
                           </span>
 
                         </div>
@@ -816,12 +859,31 @@ export default function DashboardPage() {
                     <thead>
 
                       <tr>
-                        <th>Máquina</th>
-                        <th>Tipo</th>
-                        <th>Mecânico</th>
-                        <th>Data</th>
-                        <th>Prioridade</th>
-                        <th>Status</th>
+
+                        <th>
+                          Máquina
+                        </th>
+
+                        <th>
+                          Tipo
+                        </th>
+
+                        <th>
+                          Mecânico
+                        </th>
+
+                        <th>
+                          Data
+                        </th>
+
+                        <th>
+                          Prioridade
+                        </th>
+
+                        <th>
+                          Status
+                        </th>
+
                       </tr>
 
                     </thead>
@@ -836,10 +898,12 @@ export default function DashboardPage() {
                           >
 
                             <td>
+
                               <strong>
                                 {manutencao.maquina ||
                                   "-"}
                               </strong>
+
                             </td>
 
                             <td>
@@ -861,8 +925,10 @@ export default function DashboardPage() {
                             <td>
 
                               <span className="priority-badge">
+
                                 {manutencao.prioridade ||
                                   "-"}
+
                               </span>
 
                             </td>
@@ -870,8 +936,10 @@ export default function DashboardPage() {
                             <td>
 
                               <span className="status-badge">
+
                                 {manutencao.status ||
                                   "-"}
+
                               </span>
 
                             </td>
@@ -893,7 +961,7 @@ export default function DashboardPage() {
 
             {/* ================================
                 RESUMO DA FROTA
-                4 COLUNAS
+                ACESSO RÁPIDO
             ================================= */}
 
             <section className="dashboard-panel full-panel">
@@ -911,7 +979,7 @@ export default function DashboardPage() {
                     </h2>
 
                     <p>
-                      Fabricante, modelo, horímetro e identificação dos equipamentos
+                      Acesso rápido aos equipamentos
                     </p>
 
                   </div>
@@ -951,11 +1019,11 @@ export default function DashboardPage() {
                         </th>
 
                         <th>
-                          Horímetro
+                          Placa / Chassi
                         </th>
 
                         <th>
-                          Placa / Chassi
+                          Status
                         </th>
 
                       </tr>
@@ -965,40 +1033,73 @@ export default function DashboardPage() {
                     <tbody>
 
                       {equipamentos.map(
-                        (equipamento) => (
+                        (equipamento) => {
 
-                          <tr
-                            key={equipamento.id}
-                          >
+                          const status =
+                            normalizarStatus(
+                              equipamento.status
+                            );
 
-                            <td>
+                          return (
 
-                              <strong>
-                                {equipamento.fabricante ||
+                            <tr
+                              key={equipamento.id}
+                            >
+
+                              <td>
+
+                                <strong>
+                                  {equipamento.fabricante ||
+                                    "-"}
+                                </strong>
+
+                              </td>
+
+                              <td>
+
+                                {equipamento.modelo ||
                                   "-"}
-                              </strong>
 
-                            </td>
+                              </td>
 
-                            <td>
-                              {equipamento.modelo ||
-                                "-"}
-                            </td>
+                              <td>
 
-                            <td>
-                              {equipamento.horimetro ||
-                                "-"}
-                            </td>
+                                {equipamento.placa ||
+                                  equipamento.numero_serie_chassi ||
+                                  "-"}
 
-                            <td>
-                              {equipamento.placa ||
-                                equipamento.numero_serie_chassi ||
-                                "-"}
-                            </td>
+                              </td>
 
-                          </tr>
+                              <td>
 
-                        )
+                                <span
+                                  className={`status-badge ${
+                                    status ===
+                                    "operando"
+                                      ? "operando"
+                                      : status ===
+                                        "em manutencao"
+                                      ? "em-manutencao"
+                                      : status ===
+                                        "parada"
+                                      ? "parada"
+                                      : ""
+                                  }`}
+                                >
+
+                                  {formatarStatus(
+                                    equipamento.status
+                                  )}
+
+                                </span>
+
+                              </td>
+
+                            </tr>
+
+                          );
+
+                        }
                       )}
 
                     </tbody>
@@ -1130,6 +1231,7 @@ export default function DashboardPage() {
         }
 
         @keyframes dashboardSpin {
+
           from {
             transform: rotate(0deg);
           }
@@ -1137,11 +1239,15 @@ export default function DashboardPage() {
           to {
             transform: rotate(360deg);
           }
+
         }
 
         .stats-grid {
           display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
+          grid-template-columns: repeat(
+            4,
+            minmax(0, 1fr)
+          );
           gap: 16px;
           margin-bottom: 16px;
         }
@@ -1215,7 +1321,10 @@ export default function DashboardPage() {
 
         .secondary-grid {
           display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+          grid-template-columns: repeat(
+            3,
+            minmax(0, 1fr)
+          );
           gap: 16px;
           margin-bottom: 20px;
         }
@@ -1269,7 +1378,10 @@ export default function DashboardPage() {
 
         .two-columns {
           display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
+          grid-template-columns: repeat(
+            2,
+            minmax(0, 1fr)
+          );
           gap: 20px;
           margin-bottom: 20px;
         }
@@ -1448,6 +1560,11 @@ export default function DashboardPage() {
           color: #c2410c;
         }
 
+        .status-badge.em-manutencao {
+          background: #fff7ed;
+          color: #c2410c;
+        }
+
         .status-badge.parada {
           background: #fef2f2;
           color: #b91c1c;
@@ -1487,7 +1604,7 @@ export default function DashboardPage() {
         }
 
         /* ================================
-           TABELA RESUMO DA FROTA
+           RESUMO DA FROTA
            4 COLUNAS
         ================================= */
 
@@ -1498,6 +1615,26 @@ export default function DashboardPage() {
         .frota-table th,
         .frota-table td {
           width: 25%;
+        }
+
+        .frota-table .status-badge {
+          font-size: 11px;
+          padding: 6px 10px;
+        }
+
+        .frota-table .status-badge.operando {
+          background: #ecfdf5;
+          color: #047857;
+        }
+
+        .frota-table .status-badge.em-manutencao {
+          background: #fff7ed;
+          color: #c2410c;
+        }
+
+        .frota-table .status-badge.parada {
+          background: #fef2f2;
+          color: #b91c1c;
         }
 
         .table-wrapper th {
@@ -1710,6 +1847,11 @@ export default function DashboardPage() {
           .frota-table th,
           .frota-table td {
             width: 25%;
+          }
+
+          .frota-table .status-badge {
+            font-size: 8px;
+            padding: 5px 7px;
           }
 
           .full-panel {
