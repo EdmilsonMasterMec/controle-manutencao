@@ -207,10 +207,6 @@ export default function DashboardPage() {
     }
   }
 
-  // =====================================================
-  // CONTADORES
-  // =====================================================
-
   const totalEquipamentos =
     equipamentos.length;
 
@@ -251,10 +247,6 @@ export default function DashboardPage() {
       );
     }).length;
 
-  // =====================================================
-  // PRÓXIMAS MANUTENÇÕES
-  // =====================================================
-
   const proximasManutencoes =
     useMemo(() => {
       const hoje = new Date();
@@ -294,10 +286,6 @@ export default function DashboardPage() {
         });
     }, [equipamentos]);
 
-  // =====================================================
-  // EQUIPAMENTOS EM MANUTENÇÃO
-  // =====================================================
-
   const equipamentosEmManutencao =
     useMemo(() => {
       return equipamentos
@@ -309,10 +297,6 @@ export default function DashboardPage() {
         )
         .slice(0, 5);
     }, [equipamentos]);
-
-  // =====================================================
-  // ÚLTIMAS MANUTENÇÕES
-  // =====================================================
 
   const ultimasManutencoes =
     useMemo(() => {
@@ -327,18 +311,14 @@ export default function DashboardPage() {
         }));
     }, [manutencoes]);
 
-  // =====================================================
-  // RENDER
-  // =====================================================
-
   return (
     <main className="dashboard-page">
       <div className="dashboard-container">
 
-        {/* CABEÇALHO */}
-
         <header className="dashboard-header">
+
           <div className="dashboard-title-area">
+
             <div className="dashboard-title-icon">
               <Activity size={28} />
             </div>
@@ -350,34 +330,38 @@ export default function DashboardPage() {
                 Visão geral da frota e das manutenções
               </p>
             </div>
+
           </div>
 
           <div className="dashboard-online">
             <span />
             Sistema Online
           </div>
-        </header>
 
-        {/* ERRO */}
+        </header>
 
         {erro && (
           <div className="dashboard-error">
+
             <AlertTriangle size={22} />
 
             <div>
+
               <strong>
                 Erro ao carregar o Dashboard
               </strong>
 
               <p>{erro}</p>
+
             </div>
+
           </div>
         )}
 
-        {/* CARREGANDO */}
-
         {carregando ? (
+
           <div className="dashboard-loading">
+
             <Clock3
               size={26}
               className="loading-icon"
@@ -386,18 +370,25 @@ export default function DashboardPage() {
             <span>
               Carregando informações da frota...
             </span>
+
           </div>
+
         ) : (
+
           <>
-            {/* ================================ */}
-            {/* CARDS PRINCIPAIS                  */}
-            {/* ================================ */}
+
+            {/* ================================
+                CARDS PRINCIPAIS
+            ================================= */}
 
             <section className="stats-grid">
 
               <div className="stat-card stat-blue">
+
                 <div className="stat-card-top">
+
                   <div>
+
                     <span>
                       Total de Equipamentos
                     </span>
@@ -405,21 +396,27 @@ export default function DashboardPage() {
                     <strong>
                       {totalEquipamentos}
                     </strong>
+
                   </div>
 
                   <div className="stat-icon">
                     <Construction size={25} />
                   </div>
+
                 </div>
 
                 <p>
                   Equipamentos cadastrados
                 </p>
+
               </div>
 
               <div className="stat-card stat-green">
+
                 <div className="stat-card-top">
+
                   <div>
+
                     <span>
                       Operando
                     </span>
@@ -427,21 +424,27 @@ export default function DashboardPage() {
                     <strong>
                       {operando}
                     </strong>
+
                   </div>
 
                   <div className="stat-icon">
                     <CheckCircle2 size={25} />
                   </div>
+
                 </div>
 
                 <p>
                   Equipamentos em operação
                 </p>
+
               </div>
 
               <div className="stat-card stat-orange">
+
                 <div className="stat-card-top">
+
                   <div>
+
                     <span>
                       Em Manutenção
                     </span>
@@ -449,21 +452,27 @@ export default function DashboardPage() {
                     <strong>
                       {emManutencao}
                     </strong>
+
                   </div>
 
                   <div className="stat-icon">
                     <Wrench size={25} />
                   </div>
+
                 </div>
 
                 <p>
                   Equipamentos em manutenção
                 </p>
+
               </div>
 
               <div className="stat-card stat-red">
+
                 <div className="stat-card-top">
+
                   <div>
+
                     <span>
                       Paradas
                     </span>
@@ -471,31 +480,37 @@ export default function DashboardPage() {
                     <strong>
                       {paradas}
                     </strong>
+
                   </div>
 
                   <div className="stat-icon">
                     <XCircle size={25} />
                   </div>
+
                 </div>
 
                 <p>
                   Equipamentos parados
                 </p>
+
               </div>
+
             </section>
 
-            {/* ================================ */}
-            {/* SEGUNDA LINHA                    */}
-            {/* ================================ */}
+            {/* ================================
+                CARDS SECUNDÁRIOS
+            ================================= */}
 
             <section className="secondary-grid">
 
               <div className="mini-card">
+
                 <div className="mini-icon">
                   <Settings size={23} />
                 </div>
 
                 <div>
+
                   <span>
                     Manutenções registradas
                   </span>
@@ -503,15 +518,19 @@ export default function DashboardPage() {
                   <strong>
                     {manutencoes.length}
                   </strong>
+
                 </div>
+
               </div>
 
               <div className="mini-card">
+
                 <div className="mini-icon orange">
                   <Wrench size={23} />
                 </div>
 
                 <div>
+
                   <span>
                     Manutenções ativas
                   </span>
@@ -519,15 +538,19 @@ export default function DashboardPage() {
                   <strong>
                     {manutencoesAtivas}
                   </strong>
+
                 </div>
+
               </div>
 
               <div className="mini-card">
+
                 <div className="mini-icon blue">
                   <CalendarDays size={23} />
                 </div>
 
                 <div>
+
                   <span>
                     Próximas programadas
                   </span>
@@ -535,25 +558,29 @@ export default function DashboardPage() {
                   <strong>
                     {proximasManutencoes.length}
                   </strong>
+
                 </div>
+
               </div>
+
             </section>
 
-            {/* ================================ */}
-            {/* MANUTENÇÃO / PRÓXIMAS            */}
-            {/* ================================ */}
+            {/* ================================
+                MANUTENÇÃO / PRÓXIMAS
+            ================================= */}
 
             <section className="two-columns">
-
-              {/* EQUIPAMENTOS EM MANUTENÇÃO */}
 
               <div className="dashboard-panel">
 
                 <div className="panel-header">
+
                   <div className="panel-title">
+
                     <Wrench size={22} />
 
                     <div>
+
                       <h2>
                         Equipamentos em Manutenção
                       </h2>
@@ -561,32 +588,44 @@ export default function DashboardPage() {
                       <p>
                         Equipamentos atualmente em serviço
                       </p>
+
                     </div>
+
                   </div>
+
                 </div>
 
                 {equipamentosEmManutencao.length ===
                 0 ? (
+
                   <div className="empty-state">
+
                     <CheckCircle2 size={30} />
 
                     <p>
                       Nenhum equipamento em manutenção.
                     </p>
+
                   </div>
+
                 ) : (
+
                   <div className="equipment-list">
+
                     {equipamentosEmManutencao.map(
                       (equipamento) => (
+
                         <div
                           key={equipamento.id}
                           className="equipment-card"
                         >
+
                           <div className="equipment-icon">
                             <Wrench size={20} />
                           </div>
 
                           <div className="equipment-info">
+
                             <strong>
                               {nomeEquipamento(
                                 equipamento
@@ -600,34 +639,43 @@ export default function DashboardPage() {
 
                             {equipamento
                               .numero_serie_chassi && (
+
                               <small>
                                 Série:{" "}
                                 {
                                   equipamento.numero_serie_chassi
                                 }
                               </small>
+
                             )}
+
                           </div>
 
                           <span className="status-badge maintenance">
                             Em manutenção
                           </span>
+
                         </div>
+
                       )
                     )}
-                  </div>
-                )}
-              </div>
 
-              {/* PRÓXIMAS MANUTENÇÕES */}
+                  </div>
+
+                )}
+
+              </div>
 
               <div className="dashboard-panel">
 
                 <div className="panel-header">
+
                   <div className="panel-title">
+
                     <CalendarDays size={22} />
 
                     <div>
+
                       <h2>
                         Próximas Manutenções
                       </h2>
@@ -635,28 +683,40 @@ export default function DashboardPage() {
                       <p>
                         Manutenções programadas
                       </p>
+
                     </div>
+
                   </div>
+
                 </div>
 
                 {proximasManutencoes.length ===
                 0 ? (
+
                   <div className="empty-state">
+
                     <CalendarDays size={30} />
 
                     <p>
                       Nenhuma manutenção programada.
                     </p>
+
                   </div>
+
                 ) : (
+
                   <div className="maintenance-list">
+
                     {proximasManutencoes.map(
                       (equipamento) => (
+
                         <div
                           key={equipamento.id}
                           className="scheduled-card"
                         >
+
                           <div>
+
                             <strong>
                               {nomeEquipamento(
                                 equipamento
@@ -668,43 +728,60 @@ export default function DashboardPage() {
                                 equipamento.proxima_manutencao
                               )}
                             </span>
+
                           </div>
 
                           <div className="deadline">
+
                             <small>
                               Prazo
                             </small>
 
                             <strong>
+
                               {equipamento.dias < 0
                                 ? `${Math.abs(
                                     equipamento.dias
                                   )} dias atrasada`
+
                                 : equipamento.dias ===
                                   0
+
                                 ? "Hoje"
+
                                 : `${equipamento.dias} dias`}
+
                             </strong>
+
                           </div>
+
                         </div>
+
                       )
                     )}
+
                   </div>
+
                 )}
+
               </div>
+
             </section>
 
-            {/* ================================ */}
-            {/* ÚLTIMAS MANUTENÇÕES              */}
-            {/* ================================ */}
+            {/* ================================
+                ÚLTIMAS MANUTENÇÕES
+            ================================= */}
 
             <section className="dashboard-panel full-panel">
 
               <div className="panel-header">
+
                 <div className="panel-title">
+
                   <Activity size={22} />
 
                   <div>
+
                     <h2>
                       Últimas Manutenções
                     </h2>
@@ -712,21 +789,32 @@ export default function DashboardPage() {
                     <p>
                       Histórico mais recente da frota
                     </p>
+
                   </div>
+
                 </div>
+
               </div>
 
               {ultimasManutencoes.length ===
               0 ? (
+
                 <div className="empty-state">
+
                   <p>
                     Nenhuma manutenção registrada.
                   </p>
+
                 </div>
+
               ) : (
+
                 <div className="table-wrapper">
+
                   <table>
+
                     <thead>
+
                       <tr>
                         <th>Máquina</th>
                         <th>Tipo</th>
@@ -735,14 +823,18 @@ export default function DashboardPage() {
                         <th>Prioridade</th>
                         <th>Status</th>
                       </tr>
+
                     </thead>
 
                     <tbody>
+
                       {ultimasManutencoes.map(
                         (manutencao) => (
+
                           <tr
                             key={manutencao.id}
                           >
+
                             <td>
                               <strong>
                                 {manutencao.maquina ||
@@ -767,93 +859,125 @@ export default function DashboardPage() {
                             </td>
 
                             <td>
+
                               <span className="priority-badge">
                                 {manutencao.prioridade ||
                                   "-"}
                               </span>
+
                             </td>
 
                             <td>
+
                               <span className="status-badge">
                                 {manutencao.status ||
                                   "-"}
                               </span>
+
                             </td>
+
                           </tr>
+
                         )
                       )}
+
                     </tbody>
+
                   </table>
+
                 </div>
+
               )}
+
             </section>
 
-            {/* ================================ */}
-            {/* RESUMO DA FROTA                  */}
-            {/* ================================ */}
+            {/* ================================
+                RESUMO DA FROTA
+                4 COLUNAS
+            ================================= */}
 
             <section className="dashboard-panel full-panel">
 
               <div className="panel-header">
+
                 <div className="panel-title">
+
                   <Construction size={22} />
 
                   <div>
+
                     <h2>
                       Resumo da Frota
                     </h2>
 
                     <p>
-                      Equipamentos cadastrados no sistema
+                      Fabricante, modelo, horímetro e identificação dos equipamentos
                     </p>
+
                   </div>
+
                 </div>
+
               </div>
 
               {equipamentos.length === 0 ? (
+
                 <div className="empty-state">
+
                   <Construction size={30} />
 
                   <p>
                     Nenhum equipamento cadastrado.
                   </p>
+
                 </div>
+
               ) : (
-                <div className="table-wrapper">
+
+                <div className="table-wrapper frota-table">
+
                   <table>
+
                     <thead>
+
                       <tr>
-                        <th>Equipamento</th>
-                        <th>Categoria</th>
-                        <th>Fabricante</th>
-                        <th>Modelo</th>
-                        <th>Horímetro</th>
-                        <th>Status</th>
+
+                        <th>
+                          Fabricante
+                        </th>
+
+                        <th>
+                          Modelo
+                        </th>
+
+                        <th>
+                          Horímetro
+                        </th>
+
+                        <th>
+                          Placa / Chassi
+                        </th>
+
                       </tr>
+
                     </thead>
 
                     <tbody>
+
                       {equipamentos.map(
                         (equipamento) => (
+
                           <tr
                             key={equipamento.id}
                           >
+
                             <td>
+
                               <strong>
-                                {nomeEquipamento(
-                                  equipamento
-                                )}
+                                {equipamento.fabricante ||
+                                  "-"}
                               </strong>
-                            </td>
 
-                            <td>
-                              {equipamento.categoria ||
-                                "-"}
-                            </td>
-
-                            <td>
-                              {equipamento.fabricante ||
-                                "-"}
                             </td>
 
                             <td>
@@ -867,34 +991,34 @@ export default function DashboardPage() {
                             </td>
 
                             <td>
-                              <span
-                                className={`status-badge ${normalizarStatus(
-                                  equipamento.status
-                                )}`}
-                              >
-                                {formatarStatus(
-                                  equipamento.status
-                                )}
-                              </span>
+                              {equipamento.placa ||
+                                equipamento.numero_serie_chassi ||
+                                "-"}
                             </td>
+
                           </tr>
+
                         )
                       )}
+
                     </tbody>
+
                   </table>
+
                 </div>
+
               )}
+
             </section>
+
           </>
+
         )}
+
       </div>
 
-      {/* ================================================= */}
-      {/* ESTILO EXCLUSIVO DO DASHBOARD                     */}
-      {/* Não altera globals.css nem a página Mecânicos.    */}
-      {/* ================================================= */}
-
       <style jsx>{`
+
         .dashboard-page {
           width: 100%;
           min-height: 100vh;
@@ -1362,6 +1486,20 @@ export default function DashboardPage() {
           border-collapse: collapse;
         }
 
+        /* ================================
+           TABELA RESUMO DA FROTA
+           4 COLUNAS
+        ================================= */
+
+        .frota-table table {
+          min-width: 100%;
+        }
+
+        .frota-table th,
+        .frota-table td {
+          width: 25%;
+        }
+
         .table-wrapper th {
           padding: 12px 14px;
           background: #f8fafc;
@@ -1386,16 +1524,22 @@ export default function DashboardPage() {
         }
 
         @media (max-width: 1100px) {
+
           .stats-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(
+              2,
+              minmax(0, 1fr)
+            );
           }
 
           .two-columns {
             grid-template-columns: 1fr;
           }
+
         }
 
         @media (max-width: 700px) {
+
           .dashboard-page {
             padding: 10px;
           }
@@ -1429,7 +1573,10 @@ export default function DashboardPage() {
           }
 
           .stats-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(
+              2,
+              minmax(0, 1fr)
+            );
             gap: 9px;
             margin-bottom: 9px;
           }
@@ -1560,12 +1707,19 @@ export default function DashboardPage() {
             font-size: 10px;
           }
 
+          .frota-table th,
+          .frota-table td {
+            width: 25%;
+          }
+
           .full-panel {
             margin-bottom: 12px;
           }
+
         }
 
         @media (max-width: 400px) {
+
           .dashboard-page {
             padding: 7px;
           }
@@ -1594,8 +1748,11 @@ export default function DashboardPage() {
           .equipment-card .status-badge {
             display: none;
           }
+
         }
+
       `}</style>
+
     </main>
   );
 }
