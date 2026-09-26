@@ -114,10 +114,10 @@ export default function DashboardPage() {
   const [erro, setErro] = useState("");
 
   useEffect(() => {
-    carregarDashboard();
+    carregarVisaoGeral();
   }, []);
 
-  async function carregarDashboard() {
+  async function carregarVisaoGeral() {
     setCarregando(true);
     setErro("");
 
@@ -195,12 +195,12 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error(
-        "Erro inesperado no Dashboard:",
+        "Erro inesperado na visão geral:",
         error
       );
 
       setErro(
-        "Ocorreu um erro inesperado ao carregar o Dashboard."
+        "Ocorreu um erro inesperado ao carregar a visão geral."
       );
     } finally {
       setCarregando(false);
@@ -329,13 +329,10 @@ export default function DashboardPage() {
 
             <div>
 
+              {/* NOVO TÍTULO */}
               <h1>
-                Dashboard
-              </h1>
-
-              <p>
                 Visão geral da frota e das manutenções
-              </p>
+              </h1>
 
             </div>
 
@@ -364,7 +361,7 @@ export default function DashboardPage() {
             <div>
 
               <strong>
-                Erro ao carregar o Dashboard
+                Erro ao carregar a visão geral
               </strong>
 
               <p>
@@ -961,7 +958,6 @@ export default function DashboardPage() {
 
             {/* ================================
                 RESUMO DA FROTA
-                ACESSO RÁPIDO
             ================================= */}
 
             <section className="dashboard-panel full-panel">
@@ -1159,12 +1155,6 @@ export default function DashboardPage() {
           font-weight: 800;
         }
 
-        .dashboard-title-area p {
-          margin: 5px 0 0;
-          font-size: 14px;
-          color: #64748b;
-        }
-
         .dashboard-title-icon {
           width: 52px;
           height: 52px;
@@ -1231,7 +1221,6 @@ export default function DashboardPage() {
         }
 
         @keyframes dashboardSpin {
-
           from {
             transform: rotate(0deg);
           }
@@ -1239,7 +1228,6 @@ export default function DashboardPage() {
           to {
             transform: rotate(360deg);
           }
-
         }
 
         .stats-grid {
@@ -1603,11 +1591,6 @@ export default function DashboardPage() {
           border-collapse: collapse;
         }
 
-        /* ================================
-           RESUMO DA FROTA
-           4 COLUNAS
-        ================================= */
-
         .frota-table table {
           min-width: 100%;
         }
@@ -1699,10 +1682,6 @@ export default function DashboardPage() {
 
           .dashboard-title-area h1 {
             font-size: 23px;
-          }
-
-          .dashboard-title-area p {
-            font-size: 11px;
           }
 
           .dashboard-online {
