@@ -2359,19 +2359,37 @@ export default function EquipamentosPage() {
 
         <div style={topoStyle}>
 
-          <div>
+          {/* =================================================
+              TÍTULO DA PÁGINA
+              CORRIGIDO PARA FICAR LEGÍVEL SOBRE O FUNDO
+          ================================================= */}
 
-            <h1 style={{ margin: 0 }}>
+          <div style={tituloPaginaStyle}>
+
+            <h1
+              style={{
+                margin: 0,
+                color: "#172033",
+                fontSize: "32px",
+                fontWeight: 800,
+                lineHeight: 1.15,
+              }}
+            >
               Equipamentos
             </h1>
 
             <p
               style={{
-                color: "#666",
+                margin: "8px 0 0",
+                color: "#4b5563",
+                fontSize: "16px",
+                fontWeight: 600,
               }}
             >
               {equipamentos.length}{" "}
-              equipamentos cadastrados
+              {equipamentos.length === 1
+                ? "equipamento cadastrado"
+                : "equipamentos cadastrados"}{" "}
               no sistema
             </p>
 
@@ -2442,8 +2460,6 @@ export default function EquipamentosPage() {
                   }
                 >
 
-                  {/* AÇÕES AGORA SÃO A PRIMEIRA COLUNA */}
-
                   <th
                     style={{
                       ...thStyle,
@@ -2506,10 +2522,6 @@ export default function EquipamentosPage() {
                         }}
                       >
 
-                        {/* =================================================
-                            AÇÕES PRIMEIRO
-                        ================================================= */}
-
                         <td
                           style={{
                             ...tdStyle,
@@ -2532,8 +2544,6 @@ export default function EquipamentosPage() {
                             }}
                           >
 
-                            {/* VISUALIZAR */}
-
                             <button
                               title="Visualizar"
                               onClick={() =>
@@ -2549,8 +2559,6 @@ export default function EquipamentosPage() {
                                 size={17}
                               />
                             </button>
-
-                            {/* IMPRIMIR */}
 
                             <button
                               title="Imprimir"
@@ -2572,8 +2580,6 @@ export default function EquipamentosPage() {
                               />
                             </button>
 
-                            {/* EDITAR */}
-
                             <button
                               title="Editar"
                               onClick={() =>
@@ -2589,8 +2595,6 @@ export default function EquipamentosPage() {
                                 size={17}
                               />
                             </button>
-
-                            {/* EXCLUIR */}
 
                             <button
                               title="Excluir"
@@ -2643,8 +2647,6 @@ export default function EquipamentosPage() {
 
                         </td>
 
-                        {/* FABRICANTE */}
-
                         <td
                           style={tdStyle}
                         >
@@ -2652,8 +2654,6 @@ export default function EquipamentosPage() {
                             equipamento.fabricante
                           }
                         </td>
-
-                        {/* MODELO */}
 
                         <td
                           style={tdStyle}
@@ -2663,8 +2663,6 @@ export default function EquipamentosPage() {
                           }
                         </td>
 
-                        {/* Nº SÉRIE / CHASSI */}
-
                         <td
                           style={tdStyle}
                         >
@@ -2672,8 +2670,6 @@ export default function EquipamentosPage() {
                             equipamento.numero_serie_chassi
                           }
                         </td>
-
-                        {/* PLACA */}
 
                         <td
                           style={tdStyle}
@@ -2684,8 +2680,6 @@ export default function EquipamentosPage() {
                           }
                         </td>
 
-                        {/* HORÍMETRO */}
-
                         <td
                           style={tdStyle}
                         >
@@ -2694,8 +2688,6 @@ export default function EquipamentosPage() {
                             "-"
                           }
                         </td>
-
-                        {/* STATUS */}
 
                         <td
                           style={tdStyle}
@@ -3097,6 +3089,23 @@ const containerStyle: React.CSSProperties = {
   padding: "25px",
   maxWidth: "1600px",
   margin: "0 auto",
+};
+
+/* =========================================================
+   NOVO ESTILO:
+   PAINEL DO TÍTULO "EQUIPAMENTOS"
+========================================================= */
+
+const tituloPaginaStyle: React.CSSProperties = {
+  background: "rgba(255, 255, 255, 0.94)",
+  borderRadius: "14px",
+  padding: "18px 24px",
+  border: "1px solid rgba(255,255,255,0.8)",
+  boxShadow:
+    "0 4px 18px rgba(0,0,0,.12)",
+  backdropFilter: "blur(6px)",
+  WebkitBackdropFilter: "blur(6px)",
+  minWidth: "280px",
 };
 
 const topoStyle: React.CSSProperties = {
