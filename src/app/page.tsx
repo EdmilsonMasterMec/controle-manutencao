@@ -672,7 +672,7 @@ export default function EquipamentosPage() {
   }
 
   /* =======================================================
-     MANUTENÇÕES DO EQUIPAMENTO
+     VÍNCULO OFICIAL DA MANUTENÇÃO
   ======================================================= */
 
   function manutencoesDoEquipamento(
@@ -1039,7 +1039,6 @@ export default function EquipamentosPage() {
                   servicos.length > 0
                     ? `
                       <div class="servicos">
-
                         <h4>
                           Serviços executados
                         </h4>
@@ -1134,7 +1133,6 @@ export default function EquipamentosPage() {
                             }
                           )
                           .join("")}
-
                       </div>
                     `
                     : `
@@ -1786,6 +1784,11 @@ export default function EquipamentosPage() {
         equipamentoSelecionado
       );
 
+    const qrUrl =
+      urlResumoEquipamento(
+        equipamentoSelecionado
+      );
+
     return (
       <main className="mastermec-app">
 
@@ -1798,26 +1801,38 @@ export default function EquipamentosPage() {
             ← Voltar para equipamentos
           </button>
 
-          {/* =================================================
-              CABEÇALHO DO EQUIPAMENTO
-          ================================================= */}
+          <div style={topoStyle}>
 
-          <div className="equipamentoCabecalho">
+            <div>
 
-            <div className="equipamentoTitulo">
-
-              <h1>
-                {equipamentoSelecionado.fabricante}{" "}
-                {equipamentoSelecionado.modelo}
+              <h1 style={{ margin: 0 }}>
+                {
+                  equipamentoSelecionado.fabricante
+                }{" "}
+                {
+                  equipamentoSelecionado.modelo
+                }
               </h1>
 
-              <p>
-                {equipamentoSelecionado.descricao_bem}
+              <p
+                style={{
+                  color: "#666",
+                }}
+              >
+                {
+                  equipamentoSelecionado.descricao_bem
+                }
               </p>
 
             </div>
 
-            <div className="botoesCabecalho">
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                flexWrap: "wrap",
+              }}
+            >
 
               <button
                 onClick={() =>
@@ -1847,57 +1862,124 @@ export default function EquipamentosPage() {
 
           </div>
 
-          {/* =================================================
-              QR CODE — VERSÃO LIMPA
-          ================================================= */}
+          <div style={qrBoxStyle}>
 
-          <div className="qrBoxLimpo">
+            <div style={qrTextoStyle}>
 
-            <div className="qrTitulo">
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  marginBottom: "8px",
+                }}
+              >
 
-              <QrCode size={21} />
+                <QrCode size={25} />
 
-              <h2>
-                Identificação por QR Code
-              </h2>
+                <h2
+                  style={{
+                    margin: 0,
+                  }}
+                >
+                  Identificação por QR Code
+                </h2>
+
+              </div>
+
+              <p
+                style={{
+                  margin: "8px 0",
+                  color: "#555",
+                  lineHeight: 1.5,
+                }}
+              >
+                Este QR Code identifica
+                exclusivamente este equipamento.
+              </p>
+
+              <p
+                style={{
+                  margin: "8px 0",
+                  color: "#555",
+                  lineHeight: 1.5,
+                }}
+              >
+                Ao escanear com o celular,
+                será aberto automaticamente
+                o resumo deste equipamento,
+                incluindo seu status e
+                histórico de manutenção.
+              </p>
+
+              <div
+                style={{
+                  marginTop: "15px",
+                  padding: "10px 12px",
+                  background: "#f5f5f5",
+                  borderRadius: "8px",
+                  wordBreak: "break-all",
+                  fontSize: "12px",
+                  color: "#555",
+                }}
+              >
+                {qrUrl}
+              </div>
+
+              <button
+                onClick={() =>
+                  imprimirQrCode(
+                    equipamentoSelecionado
+                  )
+                }
+                style={{
+                  ...botaoPreto,
+                  marginTop: "15px",
+                }}
+              >
+                <Printer size={18} />
+                Imprimir este QR Code
+              </button>
 
             </div>
 
             <button
               type="button"
               onClick={() => {
-                const qrUrl =
-                  urlResumoEquipamento(
-                    equipamentoSelecionado
-                  );
-
                 window.location.href =
                   qrUrl;
               }}
-              title="Abrir equipamento"
-              className="qrVisualLimpo"
+              title="Abrir resumo deste equipamento"
+              style={qrVisualButtonStyle}
             >
 
               <QRCodeSVG
                 id={`qr-code-${equipamentoSelecionado.id}`}
-                value={urlResumoEquipamento(
-                  equipamentoSelecionado
-                )}
-                size={140}
+                value={qrUrl}
+                size={230}
                 level="H"
-                marginSize={3}
+                marginSize={4}
                 bgColor="#FFFFFF"
                 fgColor="#111111"
-                title="QR Code do equipamento"
+                title={
+                  `QR Code do equipamento ` +
+                  `${equipamentoSelecionado.id}`
+                }
               />
+
+              <span
+                style={{
+                  marginTop: "10px",
+                  fontSize: "12px",
+                  color: "#555",
+                }}
+              >
+                Toque no QR Code para abrir
+              </span>
 
             </button>
 
           </div>
-
-          {/* =================================================
-              DADOS DO EQUIPAMENTO
-          ================================================= */}
 
           <div style={cardsStyle}>
 
@@ -1972,10 +2054,6 @@ export default function EquipamentosPage() {
             />
 
           </div>
-
-          {/* =================================================
-              HISTÓRICO
-          ================================================= */}
 
           <div style={historicoBoxStyle}>
 
@@ -2266,142 +2344,6 @@ export default function EquipamentosPage() {
 
         </div>
 
-        {/* =================================================
-            RESPONSIVIDADE
-        ================================================= */}
-
-        <style jsx>{`
-
-          .equipamentoCabecalho {
-            background: rgba(255, 255, 255, 0.96);
-            border-radius: 14px;
-            padding: 22px;
-            margin-top: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 20px;
-            flex-wrap: wrap;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
-          }
-
-          .equipamentoTitulo {
-            min-width: 0;
-          }
-
-          .equipamentoTitulo h1 {
-            margin: 0;
-            color: #172033;
-            font-size: 32px;
-            line-height: 1.15;
-          }
-
-          .equipamentoTitulo p {
-            margin: 8px 0 0;
-            color: #666;
-            font-size: 16px;
-          }
-
-          .botoesCabecalho {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-          }
-
-          .qrBoxLimpo {
-            background: rgba(255, 255, 255, 0.98);
-            border-radius: 14px;
-            padding: 18px 22px;
-            margin-top: 20px;
-            border: 1px solid #e5e5e5;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
-
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
-          }
-
-          .qrTitulo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            min-width: 0;
-          }
-
-          .qrTitulo h2 {
-            margin: 0;
-            color: #172033;
-            font-size: 20px;
-          }
-
-          .qrVisualLimpo {
-            border: 1px solid #ddd;
-            background: #fff;
-            border-radius: 10px;
-            padding: 10px;
-            cursor: pointer;
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            flex-shrink: 0;
-          }
-
-          .qrVisualLimpo:hover {
-            background: #f7f7f7;
-          }
-
-          @media (max-width: 700px) {
-
-            .equipamentoCabecalho {
-              padding: 18px;
-              align-items: flex-start;
-            }
-
-            .equipamentoTitulo h1 {
-              font-size: 25px;
-            }
-
-            .equipamentoTitulo p {
-              font-size: 14px;
-            }
-
-            .botoesCabecalho {
-              width: 100%;
-              display: grid;
-              grid-template-columns: 1fr;
-            }
-
-            .botoesCabecalho button {
-              width: 100%;
-              justify-content: center;
-            }
-
-            .qrBoxLimpo {
-              padding: 16px;
-              min-height: 95px;
-            }
-
-            .qrTitulo h2 {
-              font-size: 17px;
-            }
-
-            .qrVisualLimpo {
-              padding: 7px;
-            }
-
-            .qrVisualLimpo :global(svg) {
-              width: 105px;
-              height: 105px;
-            }
-
-          }
-
-        `}</style>
-
       </main>
     );
   }
@@ -2500,11 +2442,15 @@ export default function EquipamentosPage() {
                   }
                 >
 
-                  {/* =================================================
-                      NÃO EXISTE MAIS A COLUNA AÇÕES
-                  ================================================= */}
+                  {/* PRIMEIRA COLUNA:
+                      FABRICANTE + AÇÕES ABAIXO DO CABEÇALHO */}
 
-                  <th style={thStyle}>
+                  <th
+                    style={{
+                      ...thStyle,
+                      minWidth: "190px",
+                    }}
+                  >
                     Fabricante
                   </th>
 
@@ -2555,18 +2501,15 @@ export default function EquipamentosPage() {
                       >
 
                         {/* =================================================
-                            PRIMEIRA COLUNA
-
-                            ÍCONES ACIMA
-                            FABRICANTE ABAIXO
+                            PRIMEIRA COLUNA:
+                            ÍCONES EM CIMA
+                            FABRICANTE EMBAIXO
                         ================================================= */}
 
                         <td
                           style={{
                             ...tdStyle,
                             minWidth: "190px",
-                            verticalAlign:
-                              "top",
                           }}
                         >
 
@@ -2579,10 +2522,12 @@ export default function EquipamentosPage() {
                               gap: "6px",
                               alignItems:
                                 "center",
+                              justifyContent:
+                                "flex-start",
                               flexWrap:
                                 "nowrap",
                               marginBottom:
-                                "9px",
+                                "8px",
                             }}
                           >
 
@@ -2607,7 +2552,7 @@ export default function EquipamentosPage() {
                             {/* IMPRIMIR */}
 
                             <button
-                              title="Imprimir relatório"
+                              title="Imprimir"
                               onClick={() =>
                                 imprimirEquipamento(
                                   equipamento
@@ -2676,8 +2621,6 @@ export default function EquipamentosPage() {
                                 "15px",
                               fontWeight:
                                 500,
-                              color:
-                                "#222",
                               whiteSpace:
                                 "nowrap",
                             }}
@@ -2688,7 +2631,7 @@ export default function EquipamentosPage() {
                             }
                           </div>
 
-                          {/* QUANTIDADE DE MANUTENÇÕES */}
+                          {/* MANUTENÇÕES */}
 
                           {totalManutencoes >
                             0 && (
@@ -3240,7 +3183,10 @@ const tabelaBoxStyle: React.CSSProperties = {
 const tabelaStyle: React.CSSProperties = {
   width: "100%",
   borderCollapse: "collapse",
-  minWidth: "950px",
+
+  /* REDUZ A LARGURA MÍNIMA DA TABELA
+     PORQUE A COLUNA AÇÕES FOI ELIMINADA */
+  minWidth: "850px",
 };
 
 const cabecalhoTabelaStyle: React.CSSProperties = {
@@ -3254,8 +3200,8 @@ const thStyle: React.CSSProperties = {
 };
 
 const tdStyle: React.CSSProperties = {
-  padding: "14px",
-  verticalAlign: "middle",
+  padding: "12px",
+  verticalAlign: "top",
 };
 
 const acaoStyle: React.CSSProperties = {
@@ -3269,6 +3215,37 @@ const acaoStyle: React.CSSProperties = {
   alignItems: "center",
   justifyContent: "center",
   flexShrink: 0,
+};
+
+const qrBoxStyle: React.CSSProperties = {
+  background: "#fff",
+  borderRadius: "14px",
+  padding: "25px",
+  marginTop: "25px",
+  border: "1px solid #e5e5e5",
+  boxShadow:
+    "0 2px 10px rgba(0,0,0,.06)",
+  display: "grid",
+  gridTemplateColumns:
+    "minmax(0, 1fr) minmax(260px, 340px)",
+  gap: "30px",
+  alignItems: "center",
+};
+
+const qrTextoStyle: React.CSSProperties = {
+  minWidth: 0,
+};
+
+const qrVisualButtonStyle: React.CSSProperties = {
+  border: "1px solid #ddd",
+  background: "#fff",
+  borderRadius: "12px",
+  padding: "20px",
+  cursor: "pointer",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
 };
 
 const modalFundoStyle: React.CSSProperties = {
